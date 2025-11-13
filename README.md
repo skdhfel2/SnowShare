@@ -27,6 +27,117 @@ SnowShare/
 └── README.md              # 프로젝트 전체 가이드
 ```
 
+==============================================
+# 아래 구조 참고해서 구현
+
+SnowShare/
+├── api/                        # Node.js 백엔드
+│   ├── routes/
+│   ├── controllers/
+│   ├── models/
+│   ├── middleware/
+│   ├── utils/
+│   ├── lib/
+│   ├── app.js
+│   └── ...
+│
+└── client/                     # Java Swing 애플리케이션
+    ├── Main.java
+    ├── App.java               # 화면 전환 관리자
+    │
+    ├── core/                  # 핵심 프레임워크 (공통 기능)
+    │   ├── BasePanel.java     # 모든 화면의 기본 구조
+    │   ├── BaseFrame.java     # 메인 프레임 공통
+    │   ├── Navigator.java     # 화면 이동
+    │   └── Session.java       # 로그인 세션 관리
+    │
+    ├── components/            # UI 화면 (기능별 그룹화)
+    │   ├── common/            # 공통 컴포넌트
+    │   │   ├── HeaderNav.java     # 상단 메뉴/탭(뉴스/대응안내/지도/커뮤니티)
+    │   │   ├── CustomButton.java
+    │   │   ├── CustomTable.java
+    │   │   └── LoadingSpinner.java
+    │   │
+    │   ├── auth/              # 회원가입/로그인
+    │   │   ├── LoginPanel.java
+    │   │   ├── RegisterPanel.java
+    │   │   └── ProfilePanel.java  # 사용자 정보(선택)
+    │   │
+    │   ├── main/              # 메인 홈 화면
+    │   │   ├── HomePanel.java     # 시스템 소개 문구 포함
+    │   │
+    │   ├── news/              # 관련 뉴스 기능
+    │   │   ├── NewsPanel.java
+    │   │   ├── NewsListPanel.java
+    │   │   └── NewsDetailPanel.java
+    │   │
+    │   ├── guide/             # 폭설 대응 안내
+    │   │   ├── GuidePanel.java
+    │   │   ├── EmergencyContactPanel.java
+    │   │   └── EquipmentPanel.java
+    │   │
+    │   ├── map/               # 제설함 지도
+    │   │   ├── MapPanel.java
+    │   │   ├── SnowMarkerInfoPanel.java
+    │   │   └── UserLocationFinder.java
+    │   │
+    │   ├── community/         # 커뮤니티 (자유게시판/후기게시판)
+    │   │   ├── CommunityPanel.java
+    │   │   ├── FreeBoard/
+    │   │   │   ├── FreeBoardPanel.java
+    │   │   │   ├── FreeBoardWritePanel.java
+    │   │   │   ├── FreeBoardDetailPanel.java
+    │   │   │   └── FreeBoardEditPanel.java
+    │   │   ├── ReviewBoard/
+    │   │   │   ├── ReviewPanel.java
+    │   │   │   ├── ReviewWritePanel.java
+    │   │   │   └── ReviewDetailPanel.java
+    │   │   └── CommentPanel.java
+    │
+    ├── hooks/                 # 이벤트 핸들러 (기능별로 분리)
+    │   ├── auth/
+    │   │   ├── LoginHandler.java
+    │   │   └── RegisterHandler.java
+    │   │
+    │   ├── news/
+    │   │   └── RssLoadHandler.java
+    │   │
+    │   ├── guide/
+    │   │   └── ContactLoadHandler.java
+    │   │
+    │   ├── map/
+    │   │   ├── MapLoadHandler.java
+    │   │   └── MarkerClickHandler.java
+    │   │
+    │   ├── community/
+    │       ├── CreatePostHandler.java
+    │       ├── EditPostHandler.java
+    │       ├── DeletePostHandler.java
+    │       ├── LoadPostListHandler.java
+    │       └── CommentHandler.java
+    │
+    ├── utils/                 # 공통 기능
+    │   ├── ApiClient.java     # 백엔드 서버 통신
+    │   ├── JsonUtil.java
+    │   ├── Validator.java
+    │   ├── RssParser.java
+    │   ├── GeoUtil.java       # 거리 계산, GPS 관련
+    │   └── FileLoader.java    # JSON 불러오기 (긴급 연락처 등)
+    │
+    ├── models/                # DTO/데이터 객체
+    │   ├── User.java
+    │   ├── News.java
+    │   ├── SnowBox.java
+    │   ├── Post.java
+    │   ├── Comment.java
+    │   └── Review.java
+    │
+    └── assets/                # 이미지, JSON, 아이콘
+        ├── icons/
+        ├── images/
+        ├── json/
+        │   └── emergency_contacts.json
+        └── posters/
 ## 시작하기
 
 ### 백엔드 (API) 설정
