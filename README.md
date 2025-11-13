@@ -134,9 +134,34 @@ npm run format
 
 ## 협업하기
 
-다른 개발자들과 함께 작업하고 싶으시다면 [CONTRIBUTING.md](./CONTRIBUTING.md) 문서를 참고하세요.
+### 다른 사람의 저장소에 참여하기
 
-### GitHub에서 협업자 초대하기
+다른 사람이 만든 저장소에 참여하는 방법은 [COLLABORATION_GUIDE.md](./COLLABORATION_GUIDE.md)를 참고하세요.
+
+**빠른 시작:**
+
+```bash
+# 1. 저장소 Fork (GitHub에서 Fork 버튼 클릭)
+
+# 2. Fork한 저장소 클론
+git clone https://github.com/내계정/저장소명.git
+cd 저장소명
+
+# 3. 원본 저장소를 upstream으로 추가
+git remote add upstream https://github.com/원본소유자/저장소명.git
+
+# 4. 작업 브랜치 생성
+git checkout -b feature/새기능명
+
+# 5. 작업 후 커밋 및 푸시
+git add .
+git commit -m "feat: 새 기능 추가"
+git push origin feature/새기능명
+
+# 6. GitHub에서 Pull Request 생성
+```
+
+### 저장소 소유자: 협업자 초대하기
 
 1. GitHub 저장소 페이지로 이동: `https://github.com/skdhfel2/SnowShare`
 2. **Settings** → **Collaborators** → **Add people** 클릭
