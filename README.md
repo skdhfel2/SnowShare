@@ -132,6 +132,41 @@ npm run format
 ### 프론트엔드
 - Java Swing
 
+## 협업하기
+
+다른 개발자들과 함께 작업하고 싶으시다면 [CONTRIBUTING.md](./CONTRIBUTING.md) 문서를 참고하세요.
+
+### GitHub에서 협업자 초대하기
+
+1. GitHub 저장소 페이지로 이동: `https://github.com/skdhfel2/SnowShare`
+2. **Settings** → **Collaborators** → **Add people** 클릭
+3. 협업자의 GitHub 사용자명 또는 이메일 입력
+4. 권한 설정 (Read, Write, Admin 중 선택)
+5. 초대 전송
+
+협업자가 초대를 수락하면 저장소에 접근할 수 있습니다.
+
+### 협업 워크플로우 요약
+
+```bash
+# 1. 최신 코드 가져오기
+git pull origin main
+
+# 2. 새 브랜치 생성
+git checkout -b feature/새기능명
+
+# 3. 작업 후 커밋
+git add .
+git commit -m "feat: 새 기능 추가"
+
+# 4. 원격에 푸시
+git push origin feature/새기능명
+
+# 5. GitHub에서 Pull Request 생성
+```
+
+자세한 내용은 [CONTRIBUTING.md](./CONTRIBUTING.md)를 참고하세요.
+
 ## 라이선스
 
 ISC

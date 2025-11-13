@@ -1,0 +1,67 @@
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.pnpm-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+*.class
+*.jar
+*.war
+*.ear
+bin/
+out/
+target/
+
+# Logs
+logs/
+*.log
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+bin/
+out/
+target/
+.metadata/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
