@@ -1,6 +1,6 @@
 const logger = require('../lib/logger');
 
-const errorHandler = (err, req, res, next) => {
+const errorHandler = (err, req, res, _next) => {
   logger.error(`Error: ${err.message}`, { stack: err.stack });
 
   const status = err.status || err.statusCode || 500;
@@ -17,4 +17,3 @@ const errorHandler = (err, req, res, next) => {
 };
 
 module.exports = errorHandler;
-

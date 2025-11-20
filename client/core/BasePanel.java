@@ -16,11 +16,11 @@ public class BasePanel extends JPanel {
     protected static final Color COLOR_NAV_HOVER = new Color(99, 110, 114);
     
     // 공통 폰트 상수
-    protected static final Font FONT_LOGO = new Font("SansSerif", Font.BOLD, 20);
-    protected static final Font FONT_NAV = new Font("SansSerif", Font.BOLD, 14);
-    protected static final Font FONT_INTRO_BODY = new Font("SansSerif", Font.PLAIN, 18);
-    protected static final Font FONT_TITLE = new Font("SansSerif", Font.BOLD, 24);
-    protected static final Font FONT_BODY = new Font("SansSerif", Font.PLAIN, 14);
+    public static final Font FONT_LOGO = new Font("SansSerif", Font.BOLD, 20);
+    public static final Font FONT_NAV = new Font("SansSerif", Font.BOLD, 14);
+    public static final Font FONT_INTRO_BODY = new Font("SansSerif", Font.PLAIN, 18);
+    public static final Font FONT_TITLE = new Font("SansSerif", Font.BOLD, 24);
+    public static final Font FONT_BODY = new Font("SansSerif", Font.PLAIN, 14);
     
     public BasePanel() {
         setBackground(COLOR_CONTENT_BACKGROUND);
