@@ -6,8 +6,6 @@ import core.Session;
 import org.json.JSONObject;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.IOException;
 
 /**
@@ -25,6 +23,18 @@ public class ReviewDetailDialog extends JDialog {
     private JButton closeButton;
     private CommentPanel commentPanel;
     private boolean refreshNeeded = false;
+    
+    /**
+     * 문자열을 지정된 횟수만큼 반복하는 헬퍼 메서드 (Java 8 호환)
+     */
+    private String repeatString(String str, int count) {
+        if (count <= 0) return "";
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < count; i++) {
+            sb.append(str);
+        }
+        return sb.toString();
+    }
     
     public ReviewDetailDialog(JFrame parent, Review review) {
         super(parent, "후기 상세보기", true);
@@ -46,7 +56,7 @@ public class ReviewDetailDialog extends JDialog {
         saltboxLabel = new JLabel("제설함 ID: " + review.getSaltboxId());
         saltboxLabel.setFont(core.BasePanel.FONT_BODY);
         
-        String ratingStr = "★".repeat(review.getRating()) + "☆".repeat(5 - review.getRating());
+        String ratingStr = repeatString("★", review.getRating()) + repeatString("☆", 5 - review.getRating());
         ratingLabel = new JLabel("별점: " + ratingStr + " (" + review.getRating() + "/5)");
         ratingLabel.setFont(core.BasePanel.FONT_BODY);
         
@@ -119,7 +129,7 @@ public class ReviewDetailDialog extends JDialog {
                     if (data != null) {
                         review = new Review(data);
                         saltboxLabel.setText("제설함 ID: " + review.getSaltboxId());
-                        String ratingStr = "★".repeat(review.getRating()) + "☆".repeat(5 - review.getRating());
+                        String ratingStr = repeatString("★", review.getRating()) + repeatString("☆", 5 - review.getRating());
                         ratingLabel.setText("별점: " + ratingStr + " (" + review.getRating() + "/5)");
                         contentArea.setText(review.getContent());
                         dateLabel.setText("작성일: " + review.getCreatedAt());
