@@ -3,6 +3,13 @@
     "configurations": [
       {
         "type": "java",
+        "name": "MapPanel",
+        "request": "launch",
+        "mainClass": "components.map.MapPanel",
+        "projectName": "SnowShare_d629444"
+      },
+      {
+        "type": "java",
         "name": "SnowRemovalMap",
         "request": "launch",
         "mainClass": "components.map.SnowRemovalMap",
