@@ -1,5 +1,7 @@
 package components.map;
 
+import core.BasePanel;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.MediaTracker;
