@@ -4,11 +4,8 @@ import core.BasePanel;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.MediaTracker;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
 import java.awt.geom.Point2D;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -49,6 +46,8 @@ public class MapPanel extends JFrame {
   private JList<SnowBoxInfo> snowBoxListComponent;
   private DefaultListModel<SnowBoxInfo> listModel;
   private final List<Point2D.Double> snowBoxList = new ArrayList<>();
+
+  private Point2D.Double selectedMarker = null;
 
   private final CoordinateConverter coordConverter;
 
@@ -109,7 +108,20 @@ public class MapPanel extends JFrame {
       if (!e.getValueIsAdjusting()) {
         SnowBoxInfo selected = snowBoxListComponent.getSelectedValue();
         if (selected != null) {
+          selectedMarker = selected.location;
           moveToLocation(selected.location.y, selected.location.x);
+          loadMap();
+        }
+      }
+    });
+
+    snowBoxListComponent.addMouseListener(new MouseAdapter() {
+      @Override
+      public void mouseClicked(MouseEvent e) {
+      SnowBoxInfo selected = snowBoxListComponent.getSelectedValue();
+      if (selected != null) {
+        selectedMarker = selected.location;
+        loadMap();
         }
       }
     });
@@ -195,19 +207,32 @@ public class MapPanel extends JFrame {
         for (Point2D.Double p : sorted) {
           double lat = p.y;
           double lng = p.x;
-
-          if (lat >= 33 && lat <= 43 && lng >= 124 && lng <= 132) {
-            markers.append("&markers=color:blue%7C")
-                .append(String.format("%.6f,%.6f", lat, lng));
+        
+        if (selectedMarker != null && p.equals(selectedMarker)) {
+          continue;
+        }
+          
+        if (lat >= 33 && lat <= 43 && lng >= 124 && lng <= 132) {
+          markers.append("&markers=color:blue%7C")
+              .append(String.format("%.6f,%.6f", lat, lng));
 
             count++;
             if (count >= 70) break;
           }
         }
-
+        
+        String selectedMarkerParam = "";
+        if (selectedMarker != null) {
+          selectedMarkerParam = "&markers=color:red%7C" +
+              String.format("%.6f,%.6f", selectedMarker.y, selectedMarker.x);
+        }
+        
         String url = String.format(
-            "https://maps.googleapis.com/maps/api/staticmap?center=%.6f,%.6f&zoom=%d&size=%dx%d&maptype=roadmap%s&key=%s",
-            centerLat, centerLng, zoom, MAP_WIDTH, MAP_HEIGHT, markers, GOOGLE_MAPS_API_KEY);
+  "https://maps.googleapis.com/maps/api/staticmap?center=%.6f,%.6f&zoom=%d&size=%dx%d&maptype=roadmap%s%s&key=%s",
+          centerLat, centerLng, zoom, MAP_WIDTH, MAP_HEIGHT,
+          markers.toString(),
+          selectedMarkerParam,
+          GOOGLE_MAPS_API_KEY);
 
         new Thread(() -> {
           try {
