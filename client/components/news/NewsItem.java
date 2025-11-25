@@ -1,4 +1,4 @@
-package javaProject;
+package components.news;
 
 import java.util.Date;
 
@@ -23,5 +23,4 @@ public class NewsItem {
     return title;
   }
 }
-
 

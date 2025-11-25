@@ -1,4 +1,4 @@
-package javaProject;
+package components.news;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -131,5 +131,4 @@ public class NewsService {
     }
   }
 }
-
 
