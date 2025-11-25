@@ -1,4 +1,4 @@
-package javaProject;
+package components.map;
 
 import javax.swing.*;
 import java.awt.*;
@@ -8,7 +8,7 @@ import java.io.*;
 import java.util.*;
 import com.google.gson.*;
 
-public class SnowRemovalMap extends JFrame {
+public class SnowRemovalMap1 extends JFrame {
     // ✅ Google Maps API 키
     private static final String GOOGLE_API_KEY = "AIzaSyAmqp1khCMy-wdof_llEq_XMPvdHO2mgmc";
     
@@ -26,7 +26,7 @@ public class SnowRemovalMap extends JFrame {
     private JLabel mapLabel;
     private java.util.List<double[]> snowBoxLocations = new ArrayList<>();
 
-    public SnowRemovalMap() {
+    public SnowRemovalMap1() {
         setTitle("서울시 제설함 지도 뷰어");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(MAP_WIDTH, MAP_HEIGHT);
@@ -152,6 +152,6 @@ public class SnowRemovalMap extends JFrame {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(SnowRemovalMap::new);
+        SwingUtilities.invokeLater(SnowRemovalMap1::new);
     }
 }

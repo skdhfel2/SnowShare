@@ -1,4 +1,4 @@
-package javaProject;
+package components.map;
 
 import javax.swing.*;
 import java.awt.*;
@@ -34,7 +34,7 @@ public class SnowRemovalMap extends JFrame {
   private static final String SNOWBOX_ENDPOINT =
       "https://api.odcloud.kr/api/15086762/v1/uddi:b2f84553-0a08-4d35-b444-f2a9b0324c04";
   private static final String LOCAL_JSON_PATH =
-      "/Users/pingye_03/Downloads/서울시 제설함 위치정보.json";
+      "client/public/data/seoul_snowbox_location.json";
   private static final boolean USE_LOCAL_FILE = true; // 로컬 파일 사용 여부
   private static final int MAP_WIDTH = 800;
   private static final int MAP_HEIGHT = 600;
@@ -273,14 +273,14 @@ public class SnowRemovalMap extends JFrame {
       if (USE_LOCAL_FILE) {
         // 로컬 JSON 파일 읽기
         System.out.println("로컬 JSON 파일 읽기: " + LOCAL_JSON_PATH);
-        json = Files.readString(Paths.get(LOCAL_JSON_PATH), StandardCharsets.UTF_8);
+        json = readAll(Files.newInputStream(Paths.get(LOCAL_JSON_PATH)));
         System.out.println("JSON 파일 크기: " + json.length() + " 문자");
       } else {
         // API 호출
         String url =
             SNOWBOX_ENDPOINT
                 + "?page=1&perPage=1000&returnType=JSON&serviceKey="
-                + URLEncoder.encode(SNOWBOX_API_KEY, StandardCharsets.UTF_8);
+                + URLEncoder.encode(SNOWBOX_API_KEY, "UTF-8");
 
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         connection.setRequestMethod("GET");

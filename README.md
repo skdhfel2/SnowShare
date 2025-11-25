@@ -140,90 +140,6 @@ SnowShare/
         └── posters/
 ## 시작하기
 
-### 백엔드 (API) 설정
-
-1. **의존성 설치**
-
-```bash
-cd api
-npm install
-```
-
-2. **환경 변수 설정**
-
-`.env.example` 파일을 복사하여 `.env` 파일을 생성하고 데이터베이스 정보를 입력하세요:
-
-```bash
-cp .env.example .env
-```
-
-`.env` 파일 내용:
-
-```
-PORT=3000
-NODE_ENV=development
-
-DB_HOST=localhost
-DB_USER=root
-DB_PASS=your_password
-DB_NAME=snowshare
-
-LOG_LEVEL=info
-```
-
-3. **데이터베이스 생성**
-
-MySQL에서 데이터베이스를 생성하세요:
-
-```sql
-CREATE DATABASE snowshare;
-```
-
-4. **서버 실행**
-
-```bash
-npm run dev
-```
-
-서버가 `http://localhost:3000`에서 실행됩니다.
-
-### API 엔드포인트
-
-- `GET /health` - 서버 상태 확인
-- `GET /api/test` - 데이터베이스 연결 테스트
-
-### 클라이언트 (Java Swing) 실행
-
-1. **컴파일**
-
-```bash
-cd client
-javac Main.java
-```
-
-2. **실행**
-
-```bash
-java Main
-```
-
-## 개발 도구
-
-### ESLint & Prettier
-
-코드 스타일을 자동으로 검사하고 포맷팅합니다.
-
-```bash
-# ESLint 검사
-npm run lint
-
-# ESLint 자동 수정
-npm run lint:fix
-
-# Prettier 포맷팅
-npm run format
-```
-
 ### 코드 스타일
 
 - 세미콜론 사용
@@ -246,3 +162,66 @@ npm run format
 ## 라이선스
 
 ISC
+
+
+
+```
+SnowShare
+├─ api
+│  ├─ .eslintrc.js
+│  ├─ .prettierrc
+│  ├─ app.js
+│  ├─ controllers
+│  │  └─ testController.js
+│  ├─ lib
+│  │  ├─ db.js
+│  │  └─ logger.js
+│  ├─ middleware
+│  │  └─ errorHandler.js
+│  ├─ models
+│  │  └─ README.md
+│  ├─ package.json
+│  ├─ routes
+│  │  └─ test.js
+│  └─ utils
+│     └─ README.md
+├─ client
+│  ├─ App.java
+│  ├─ components
+│  │  ├─ auth
+│  │  │  ├─ LoginPanel.java
+│  │  │  └─ RegisterPanel.java
+│  │  ├─ common
+│  │  │  └─ HeaderNav.java
+│  │  ├─ community
+│  │  │  └─ CommunityPanel.java
+│  │  ├─ guide
+│  │  │  └─ GuidePanel.java
+│  │  ├─ main
+│  │  │  └─ HomePanel.java
+│  │  ├─ map
+│  │  │  ├─ CoordinateConverter.java
+│  │  │  ├─ lib
+│  │  │  ├─ MapPanel.java
+│  │  │  ├─ SnowRemovalMap.java
+│  │  │  └─ SnowRemovalMap1.java
+│  │  ├─ news
+│  │  │  └─ NewsPanel.java
+│  │  └─ README.md
+│  ├─ core
+│  │  ├─ BaseFrame.java
+│  │  ├─ BasePanel.java
+│  │  ├─ Navigator.java
+│  │  └─ Session.java
+│  ├─ hooks
+│  │  └─ README.md
+│  ├─ Main.java
+│  ├─ public
+│  │  └─ data
+│  │     └─ seoul_snowbox_location.json
+│  ├─ README.md
+│  └─ utils
+│     └─ README.md
+└─ README.md
+
+```
