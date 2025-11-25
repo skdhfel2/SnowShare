@@ -89,8 +89,8 @@ public class MapPanel extends JFrame {
 
     snowBoxListComponent.setCellRenderer(new DefaultListCellRenderer() {
       @Override
-      public Component getListCellRendererComponent(JList<?> list, Object value, int index,
-          boolean isSelected, boolean cellHasFocus) {
+      public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected,
+          boolean cellHasFocus) {
 
         super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
 
@@ -118,10 +118,10 @@ public class MapPanel extends JFrame {
     snowBoxListComponent.addMouseListener(new MouseAdapter() {
       @Override
       public void mouseClicked(MouseEvent e) {
-      SnowBoxInfo selected = snowBoxListComponent.getSelectedValue();
-      if (selected != null) {
-        selectedMarker = selected.location;
-        loadMap();
+        SnowBoxInfo selected = snowBoxListComponent.getSelectedValue();
+        if (selected != null) {
+          selectedMarker = selected.location;
+          loadMap();
         }
       }
     });
@@ -207,32 +207,30 @@ public class MapPanel extends JFrame {
         for (Point2D.Double p : sorted) {
           double lat = p.y;
           double lng = p.x;
-        
-        if (selectedMarker != null && p.equals(selectedMarker)) {
-          continue;
-        }
-          
-        if (lat >= 33 && lat <= 43 && lng >= 124 && lng <= 132) {
-          markers.append("&markers=color:blue%7C")
-              .append(String.format("%.6f,%.6f", lat, lng));
+
+          if (selectedMarker != null && p.equals(selectedMarker)) {
+            continue;
+          }
+
+          if (lat >= 33 && lat <= 43 && lng >= 124 && lng <= 132) {
+            markers.append("&markers=color:blue%7C").append(String.format("%.6f,%.6f", lat, lng));
 
             count++;
-            if (count >= 70) break;
+            if (count >= 70)
+              break;
           }
         }
-        
+
         String selectedMarkerParam = "";
         if (selectedMarker != null) {
-          selectedMarkerParam = "&markers=color:red%7C" +
-              String.format("%.6f,%.6f", selectedMarker.y, selectedMarker.x);
+          selectedMarkerParam = "&markers=color:red%7C"
+              + String.format("%.6f,%.6f", selectedMarker.y, selectedMarker.x);
         }
-        
+
         String url = String.format(
-  "https://maps.googleapis.com/maps/api/staticmap?center=%.6f,%.6f&zoom=%d&size=%dx%d&maptype=roadmap%s%s&key=%s",
-          centerLat, centerLng, zoom, MAP_WIDTH, MAP_HEIGHT,
-          markers.toString(),
-          selectedMarkerParam,
-          GOOGLE_MAPS_API_KEY);
+            "https://maps.googleapis.com/maps/api/staticmap?center=%.6f,%.6f&zoom=%d&size=%dx%d&maptype=roadmap%s%s&key=%s",
+            centerLat, centerLng, zoom, MAP_WIDTH, MAP_HEIGHT, markers.toString(), selectedMarkerParam,
+            GOOGLE_MAPS_API_KEY);
 
         new Thread(() -> {
           try {
@@ -244,12 +242,19 @@ public class MapPanel extends JFrame {
             SwingUtilities.invokeLater(() -> {
               if (icon.getIconWidth() > 0) {
                 mapLabel.setIcon(icon);
+                mapLabel.setPreferredSize(new Dimension(icon.getIconWidth(), icon.getIconHeight()));
+                mapLabel.setSize(icon.getIconWidth(), icon.getIconHeight());
+                mapLabel.setMinimumSize(new Dimension(icon.getIconWidth(), icon.getIconHeight()));
+                mapLabel.setMaximumSize(new Dimension(icon.getIconWidth(), icon.getIconHeight()));
+                mapLabel.revalidate();
+                mapLabel.repaint();
                 mapLabel.setText(null);
               } else {
                 mapLabel.setText("지도 로드 실패");
               }
             });
-          } catch (Exception ignored) {}
+          } catch (Exception ignored) {
+          }
         }).start();
 
       } catch (Exception ex) {
@@ -289,12 +294,16 @@ public class MapPanel extends JFrame {
     JsonObject root = JsonParser.parseString(json).getAsJsonObject();
     JsonArray dataArray = null;
 
-    if (root.has("DATA")) dataArray = root.getAsJsonArray("DATA");
-    else if (root.has("data")) dataArray = root.getAsJsonArray("data");
-    else if (root.has("records")) dataArray = root.getAsJsonArray("records");
+    if (root.has("DATA"))
+      dataArray = root.getAsJsonArray("DATA");
+    else if (root.has("data"))
+      dataArray = root.getAsJsonArray("data");
+    else if (root.has("records"))
+      dataArray = root.getAsJsonArray("records");
 
     snowBoxList.clear();
-    if (dataArray == null) return;
+    if (dataArray == null)
+      return;
 
     for (JsonElement el : dataArray) {
       JsonObject item = el.getAsJsonObject();
@@ -307,16 +316,17 @@ public class MapPanel extends JFrame {
           Point2D.Double latLng = new Point2D.Double(lng, lat);
           snowBoxList.add(latLng);
 
-          String sboxNum = item.has("제설함번호") ? item.get("제설함번호").getAsString() :
-                          (item.has("sbox_num") ? item.get("sbox_num").getAsString() : "");
-          String mgcNm = item.has("관리기관명") ? item.get("관리기관명").getAsString() :
-                        (item.has("mgc_nm") ? item.get("mgc_nm").getAsString() : "");
-          String detlCn = item.has("위치상세정보") ? item.get("위치상세정보").getAsString() :
-                         (item.has("detl_cn") ? item.get("detl_cn").getAsString() : "");
+          String sboxNum = item.has("제설함번호") ? item.get("제설함번호").getAsString()
+              : (item.has("sbox_num") ? item.get("sbox_num").getAsString() : "");
+          String mgcNm = item.has("관리기관명") ? item.get("관리기관명").getAsString()
+              : (item.has("mgc_nm") ? item.get("mgc_nm").getAsString() : "");
+          String detlCn = item.has("위치상세정보") ? item.get("위치상세정보").getAsString()
+              : (item.has("detl_cn") ? item.get("detl_cn").getAsString() : "");
 
           snowBoxInfoList.add(new SnowBoxInfo(latLng, sboxNum, mgcNm, detlCn));
 
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
       }
 
       else if (item.has("g2_xmin") && item.has("g2_ymin")) {
@@ -336,13 +346,15 @@ public class MapPanel extends JFrame {
 
           snowBoxInfoList.add(new SnowBoxInfo(latLng, sboxNum, mgcNm, detlCn));
 
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
       }
     }
 
     SwingUtilities.invokeLater(() -> {
       listModel.clear();
-      for (SnowBoxInfo info : snowBoxInfoList) listModel.addElement(info);
+      for (SnowBoxInfo info : snowBoxInfoList)
+        listModel.addElement(info);
     });
   }
 
@@ -352,10 +364,8 @@ public class MapPanel extends JFrame {
     String s = searchText.toLowerCase();
 
     for (SnowBoxInfo info : snowBoxInfoList) {
-      if (searchText.isEmpty() ||
-          info.sboxNum.toLowerCase().contains(s) ||
-          info.mgcNm.toLowerCase().contains(s) ||
-          info.detlCn.toLowerCase().contains(s)) {
+      if (searchText.isEmpty() || info.sboxNum.toLowerCase().contains(s) || info.mgcNm.toLowerCase().contains(s)
+          || info.detlCn.toLowerCase().contains(s)) {
 
         listModel.addElement(info);
       }
@@ -370,29 +380,67 @@ public class MapPanel extends JFrame {
     new Thread(() -> loadMap()).start();
   }
 
+  private double mapScale() {
+    return 256.0 * Math.pow(2.0, zoom);
+  }
+
+  private double lngToPixelX(double lng) {
+    double scale = mapScale();
+    return (lng + 180.0) / 360.0 * scale;
+  }
+
+  private double latToPixelY(double lat) {
+    double scale = mapScale();
+    double sinLat = Math.sin(Math.toRadians(lat));
+    double y = 0.5 - (Math.log((1.0 + sinLat) / (1.0 - sinLat)) / (4.0 * Math.PI));
+    return y * scale;
+  }
+
+  private double pixelXToLng(double pixelX) {
+    double scale = mapScale();
+    return pixelX / scale * 360.0 - 180.0;
+  }
+
+  private double pixelYToLat(double pixelY) {
+    double scale = mapScale();
+    double y = Math.PI - (2.0 * Math.PI * pixelY / scale);
+    return Math.toDegrees(Math.atan(Math.sinh(y)));
+  }
+
   // 지도 클릭 → 가장 가까운 제설함 찾기
   private void showNearestSnowBoxInfo(int clickX, int clickY) {
-    if (snowBoxInfoList.isEmpty()) return;
+    if (snowBoxInfoList.isEmpty())
+      return;
 
-    double clickLat = centerLat - (clickY - MAP_HEIGHT / 2.0) * (0.002 / Math.pow(2, zoom - 10));
-    double clickLng = centerLng + (clickX - MAP_WIDTH / 2.0) * (0.002 / Math.pow(2, zoom - 10))
-        / Math.cos(Math.toRadians(centerLat));
+    double scale = mapScale();
+
+    double centerPixelX = lngToPixelX(centerLng);
+    double centerPixelY = latToPixelY(centerLat);
+
+    double markerAnchorOffset = 30.0;
+    double clickPixelX = centerPixelX + (clickX - MAP_WIDTH / 2.0)+markerAnchorOffset/3.2;
+    double clickPixelY = centerPixelY + (clickY - MAP_HEIGHT / 2.0)+markerAnchorOffset;
 
     SnowBoxInfo nearest = null;
-    double minDistance = Double.MAX_VALUE;
+    double minDistSq = Double.MAX_VALUE;
 
     for (SnowBoxInfo info : snowBoxInfoList) {
-      double latDiff = info.location.y - clickLat;
-      double lngDiff = info.location.x - clickLng;
-      double dist = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
+      double px = lngToPixelX(info.location.x); // x = lng
+      double py = latToPixelY(info.location.y); // y = lat
 
-      if (dist < minDistance) {
-        minDistance = dist;
+      double dx = px - clickPixelX;
+      double dy = py - clickPixelY;
+      double distSq = dx * dx + dy * dy;
+
+      if (distSq < minDistSq) {
+        minDistSq = distSq;
         nearest = info;
       }
     }
 
-    if (nearest != null && minDistance < 0.005) {
+    double thresholdPx = 15.0;
+
+    if (nearest != null && minDistSq <= thresholdPx * thresholdPx) {
       showSnowBoxInfoWindow(nearest);
     }
   }
@@ -421,9 +469,7 @@ public class MapPanel extends JFrame {
     content.add(detl);
     content.add(Box.createVerticalStrut(10));
 
-    JLabel coord = new JLabel(String.format(
-        "<html><b>좌표:</b> (%.6f, %.6f)</html>",
-        info.location.y, info.location.x));
+    JLabel coord = new JLabel(String.format("<html><b>좌표:</b> (%.6f, %.6f)</html>", info.location.y, info.location.x));
     coord.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 11));
     content.add(coord);
     content.add(Box.createVerticalStrut(15));
@@ -441,13 +487,14 @@ public class MapPanel extends JFrame {
   }
 
   private String readAll(InputStream stream) throws IOException {
-    if (stream == null) return "";
-    try (BufferedReader reader =
-             new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+    if (stream == null)
+      return "";
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
 
       StringBuilder sb = new StringBuilder();
       String line;
-      while ((line = reader.readLine()) != null) sb.append(line);
+      while ((line = reader.readLine()) != null)
+        sb.append(line);
       return sb.toString();
     }
   }
