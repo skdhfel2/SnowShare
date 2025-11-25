@@ -26,4 +26,3 @@ const testConnection = async (req, res) => {
 module.exports = {
   testConnection,
 };
-

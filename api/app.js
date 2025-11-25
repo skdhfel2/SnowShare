@@ -4,6 +4,9 @@ require('dotenv').config();
 
 const logger = require('./lib/logger');
 const testRoutes = require('./routes/test');
+const postRoutes = require('./routes/posts');
+const reviewRoutes = require('./routes/reviews');
+const commentRoutes = require('./routes/comments');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,6 +24,9 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/test', testRoutes);
+app.use('/api/posts', postRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/comments', commentRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -28,7 +34,7 @@ app.get('/health', (req, res) => {
 });
 
 // Error handling middleware
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   logger.error(err.stack);
   res.status(err.status || 500).json({
     error: {
@@ -48,4 +54,3 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
-

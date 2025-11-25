@@ -1,0 +1,40 @@
+# Java 빌드 결과물
+client/bin/
+client/target/
+*.class
+
+# Maven (사용 안 하지만 혹시 모르니)
+client/.mvn/
+client/mvnw
+client/mvnw.cmd
+
+# IDE 설정
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS 파일
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# 로그 파일
+*.log
+logs/
+
+# 환경 변수
+.env
+.env.local
+
+# Node.js (API)
+api/node_modules/
+api/.env
+
+# 기타
+*.jar
+!client/lib/json-20231013.jar
+
