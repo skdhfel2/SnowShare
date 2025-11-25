@@ -4,6 +4,7 @@ import core.BasePanel;
 import models.News;
 import utils.NewsService;
 import utils.AISummarizer;
+import utils.IconFactory;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.Desktop;
@@ -31,6 +32,8 @@ public class NewsPanel extends BasePanel {
         aiSummarizer = new AISummarizer();
         initializeComponents();
         setupLayout();
+        // 처음 진입 시 자동으로 뉴스 로드
+        loadNews();
     }
     
     private void initializeComponents() {
@@ -81,17 +84,17 @@ public class NewsPanel extends BasePanel {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         buttonPanel.setOpaque(false);
         
-        JButton refreshButton = createStyledButton("🔄 뉴스 새로고침", new Color(70, 130, 180));
+        JButton refreshButton = createStyledButton("뉴스 새로고침", new Color(70, 130, 180), IconFactory.createRefreshIcon());
         refreshButton.addActionListener(e -> loadNews());
         
-        aiSummaryButton = createStyledButton("🤖 AI 요약", new Color(147, 112, 219));
+        aiSummaryButton = createStyledButton("AI 요약", new Color(147, 112, 219), IconFactory.createAIIcon());
         aiSummaryButton.addActionListener(e -> generateAISummary());
         aiSummaryButton.setEnabled(false);
         
         buttonPanel.add(refreshButton);
         buttonPanel.add(aiSummaryButton);
         
-        newsStatusLabel = new JLabel("📰 뉴스를 불러오려면 새로고침 버튼을 클릭하세요.");
+        newsStatusLabel = new JLabel("뉴스를 불러오는 중...");
         newsStatusLabel.setHorizontalAlignment(SwingConstants.CENTER);
         newsStatusLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 12));
         newsStatusLabel.setForeground(new Color(100, 100, 100));
@@ -138,8 +141,8 @@ public class NewsPanel extends BasePanel {
         add(newsSplitPane, BorderLayout.CENTER);
     }
     
-    private JButton createStyledButton(String text, Color bgColor) {
-        JButton button = new JButton(text);
+    private JButton createStyledButton(String text, Color bgColor, ImageIcon icon) {
+        JButton button = new JButton(text, icon);
         button.setFont(new Font("맑은 고딕", Font.BOLD, 12));
         button.setPreferredSize(new Dimension(140, 35));
         button.setBackground(bgColor);
@@ -147,6 +150,8 @@ public class NewsPanel extends BasePanel {
         button.setFocusPainted(false);
         button.setBorderPainted(false);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        button.setHorizontalTextPosition(SwingConstants.RIGHT);
+        button.setIconTextGap(8);
         
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
@@ -267,7 +272,7 @@ public class NewsPanel extends BasePanel {
         }
         
         aiSummaryButton.setEnabled(false);
-        aiSummaryButton.setText("🤖 AI 요약 중...");
+        aiSummaryButton.setText("AI 요약 중...");
         newsStatusLabel.setText("AI가 기사를 요약하는 중입니다...");
         
         new Thread(() -> {
@@ -287,7 +292,7 @@ public class NewsPanel extends BasePanel {
                 SwingUtilities.invokeLater(() -> {
                     updateNewsDetail(currentSelectedNews, summary);
                     aiSummaryButton.setEnabled(true);
-                    aiSummaryButton.setText("🤖 AI 요약");
+                    aiSummaryButton.setText("AI 요약");
                     newsStatusLabel.setText("AI 요약이 완료되었습니다.");
                 });
             } catch (Exception e) {
@@ -306,7 +311,7 @@ public class NewsPanel extends BasePanel {
                     e.printStackTrace();
                     
                     aiSummaryButton.setEnabled(true);
-                    aiSummaryButton.setText("🤖 AI 요약");
+                    aiSummaryButton.setText("AI 요약");
                     newsStatusLabel.setText("AI 요약 실패: " + (errorMessage.length() > 50 ? errorMessage.substring(0, 50) + "..." : errorMessage));
                 });
             }
@@ -372,12 +377,12 @@ public class NewsPanel extends BasePanel {
                 if (isSelected) {
                     setBackground(new Color(135, 206, 250));
                     setForeground(Color.WHITE);
-                    setText(String.format("<html><b>%s</b><br/><font size='-1'>📅 %s</font></html>",
+                    setText(String.format("<html><b>%s</b><br/><font size='-1'>%s</font></html>",
                             news.title, dateFormat.format(news.pubDate)));
                 } else {
                     setBackground(index % 2 == 0 ? Color.WHITE : new Color(250, 250, 250));
                     setForeground(new Color(50, 50, 50));
-                    setText(String.format("<html><b>%s</b><br/><font size='-1' color='gray'>📅 %s</font></html>",
+                    setText(String.format("<html><b>%s</b><br/><font size='-1' color='gray'>%s</font></html>",
                             news.title, dateFormat.format(news.pubDate)));
                 }
             }

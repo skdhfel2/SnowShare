@@ -5,6 +5,7 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import core.Navigator;
+import utils.IconFactory;
 
 /**
  * 상단 헤더 네비게이션 (모든 페이지에서 고정으로 사용)
@@ -67,11 +68,13 @@ public class HeaderNav extends JPanel {
     }
     
     private JLabel createLogoLabel() {
-        JLabel logoLabel = new JLabel(" ❄️ SnowShare");
+        ImageIcon snowIcon = IconFactory.createSnowflakeIcon();
+        JLabel logoLabel = new JLabel("SnowShare", snowIcon, SwingConstants.LEFT);
         logoLabel.setFont(FONT_LOGO);
         logoLabel.setForeground(Color.WHITE);  // 명시적으로 흰색 설정
         logoLabel.setOpaque(false);
         logoLabel.setBorder(BorderFactory.createEmptyBorder(15, 25, 15, 25));
+        logoLabel.setIconTextGap(8);
         
         // 로고 클릭 이벤트 (홈으로)
         logoLabel.addMouseListener(new MouseAdapter() {
