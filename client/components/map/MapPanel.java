@@ -6,6 +6,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.geom.Point2D;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -43,11 +45,18 @@ public class MapPanel extends BasePanel {
   private int zoom = 16;
 
   private JLabel mapLabel;
+  private JPanel mapPanel;  // 지도 패널 (Panning을 위해 필드로 선언)
   private JList<SnowBoxInfo> snowBoxListComponent;
   private DefaultListModel<SnowBoxInfo> listModel;
   private final List<Point2D.Double> snowBoxList = new ArrayList<>();
 
   private Point2D.Double selectedMarker = null;
+  
+  // 지도 이동을 위한 변수
+  private Image currentMapImage = null;  // 현재 표시 중인 지도 이미지
+  private Image previousMapImage = null;  // 이전 지도 이미지 (부드러운 전환용)
+  private boolean isLoadingMap = false; // 지도 로딩 중인지 여부
+  private javax.swing.Timer debounceTimer;  // 키보드 입력 디바운싱용 타이머
 
   private final CoordinateConverter coordConverter;
 
@@ -139,8 +148,11 @@ public class MapPanel extends BasePanel {
     sidePanel.add(searchPanel, BorderLayout.NORTH);
 
     mapLabel = new JLabel("지도를 불러오는 중...", SwingConstants.CENTER);
-
-    JPanel mapPanel = new JPanel(new BorderLayout());
+    mapLabel.setHorizontalAlignment(SwingConstants.CENTER);
+    mapLabel.setVerticalAlignment(SwingConstants.CENTER);
+    
+    // 지도 패널
+    mapPanel = new JPanel(new BorderLayout());
     mapPanel.add(mapLabel, BorderLayout.CENTER);
 
     JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, sidePanel, mapPanel);
@@ -152,12 +164,13 @@ public class MapPanel extends BasePanel {
     loadMap();
 
     // 지도 클릭 이벤트 (제설함 정보 표시)
-    mapLabel.addMouseListener(new MouseAdapter() {
+    mapPanel.addMouseListener(new MouseAdapter() {
       @Override
       public void mouseClicked(MouseEvent e) {
         if (e.getClickCount() == 1) {
           showNearestSnowBoxInfo(e.getX(), e.getY());
         } else if (e.getClickCount() == 2) {
+          // 더블 클릭: 해당 위치로 이동
           int x = e.getX();
           int y = e.getY();
           int dx = x - MAP_WIDTH / 2;
@@ -171,19 +184,114 @@ public class MapPanel extends BasePanel {
     });
 
     // 줌 기능
-    mapLabel.addMouseWheelListener(e -> {
+    mapPanel.addMouseWheelListener(e -> {
       zoom -= e.getWheelRotation();
       zoom = Math.max(5, Math.min(18, zoom));
       loadMap();
     });
+    
+    // 키보드로 지도 이동 (방향키, WASD)
+    mapPanel.setFocusable(true);  // 키보드 이벤트를 받기 위해 포커스 가능하게 설정
+    mapPanel.requestFocusInWindow();  // 초기 포커스 설정
+    
+    mapPanel.addKeyListener(new KeyAdapter() {
+      @Override
+      public void keyPressed(KeyEvent e) {
+        int keyCode = e.getKeyCode();
+        double moveDistance = 0.001;  // 기본 이동 거리 (위경도 단위)
+        
+        // Shift 키를 누르고 있으면 더 빠르게 이동
+        if (e.isShiftDown()) {
+          moveDistance *= 3.0;
+        }
+        
+        // Ctrl 키를 누르고 있으면 더 느리게 이동
+        if (e.isControlDown()) {
+          moveDistance *= 0.3;
+        }
+        
+        // 줌 레벨에 따라 이동 거리 조정 (줌이 클수록 작게 이동)
+        moveDistance /= Math.pow(2, (zoom - 10) / 2.0);
+        
+        boolean moved = false;
+        
+        // 방향키 또는 WASD 키로 이동
+        switch (keyCode) {
+          case KeyEvent.VK_UP:
+          case KeyEvent.VK_W:
+            centerLat += moveDistance;
+            moved = true;
+            break;
+          case KeyEvent.VK_DOWN:
+          case KeyEvent.VK_S:
+            centerLat -= moveDistance;
+            moved = true;
+            break;
+          case KeyEvent.VK_LEFT:
+          case KeyEvent.VK_A:
+            centerLng -= moveDistance / Math.cos(Math.toRadians(centerLat));
+            moved = true;
+            break;
+          case KeyEvent.VK_RIGHT:
+          case KeyEvent.VK_D:
+            centerLng += moveDistance / Math.cos(Math.toRadians(centerLat));
+            moved = true;
+            break;
+          case KeyEvent.VK_PLUS:
+          case KeyEvent.VK_EQUALS:  // + 키 (Shift 없이)
+            zoom++;
+            zoom = Math.min(18, zoom);
+            loadMap();
+            return;
+          case KeyEvent.VK_MINUS:
+          case KeyEvent.VK_SUBTRACT:
+            zoom--;
+            zoom = Math.max(5, zoom);
+            loadMap();
+            return;
+        }
+        
+        if (moved) {
+          // 디바운싱: 연속 입력 시 마지막 입력 후 일정 시간 후에만 로드
+          if (debounceTimer != null && debounceTimer.isRunning()) {
+            debounceTimer.stop();
+          }
+          debounceTimer = new javax.swing.Timer(150, evt -> {
+            loadMap();  // 빨간색 마커(본인 위치)가 중심에 따라 이동
+          });
+          debounceTimer.setRepeats(false);
+          debounceTimer.start();
+        }
+      }
+    });
+    
+    // 마우스 클릭 시 포커스 요청 (키보드 입력을 받기 위해)
+    mapPanel.addMouseListener(new MouseAdapter() {
+      @Override
+      public void mouseClicked(MouseEvent e) {
+        mapPanel.requestFocusInWindow();
+      }
+    });
   }
 
-  // 지도 로딩
+  // 지도 로딩 (부드러운 전환 지원)
   private void loadMap() {
+    if (isLoadingMap) {
+      return;  // 이미 로딩 중이면 중복 요청 방지
+    }
+    
+    // 로딩 중 표시 (이전 이미지는 유지)
+    if (currentMapImage == null) {
+      mapLabel.setText("지도를 불러오는 중...");
+    }
+    
+    isLoadingMap = true;
+    
     SwingUtilities.invokeLater(() -> {
       try {
         if (snowBoxList.isEmpty()) {
           mapLabel.setText("제설함 데이터가 없습니다.");
+          isLoadingMap = false;
           return;
         }
 
@@ -214,15 +322,20 @@ public class MapPanel extends BasePanel {
           }
         }
 
+        // 빨간색 마커: 본인 위치 (지도 중심에 항상 표시)
+        String userLocationMarker = "&markers=color:red%7Csize:mid%7C"
+            + String.format("%.6f,%.6f", centerLat, centerLng);
+        
+        // 선택된 마커 (리스트에서 선택한 경우)
         String selectedMarkerParam = "";
-        if (selectedMarker != null) {
-          selectedMarkerParam = "&markers=color:red%7C"
+        if (selectedMarker != null && !selectedMarker.equals(new Point2D.Double(centerLng, centerLat))) {
+          selectedMarkerParam = "&markers=color:orange%7C"
               + String.format("%.6f,%.6f", selectedMarker.y, selectedMarker.x);
         }
 
         String url = String.format(
-            "https://maps.googleapis.com/maps/api/staticmap?center=%.6f,%.6f&zoom=%d&size=%dx%d&maptype=roadmap%s%s&key=%s",
-            centerLat, centerLng, zoom, MAP_WIDTH, MAP_HEIGHT, markers.toString(), selectedMarkerParam,
+            "https://maps.googleapis.com/maps/api/staticmap?center=%.6f,%.6f&zoom=%d&size=%dx%d&maptype=roadmap%s%s%s&key=%s",
+            centerLat, centerLng, zoom, MAP_WIDTH, MAP_HEIGHT, markers.toString(), userLocationMarker, selectedMarkerParam,
             GOOGLE_MAPS_API_KEY);
 
         new Thread(() -> {
@@ -234,6 +347,15 @@ public class MapPanel extends BasePanel {
 
             SwingUtilities.invokeLater(() -> {
               if (icon.getIconWidth() > 0) {
+                // 이전 이미지를 백업 (부드러운 전환을 위해)
+                if (currentMapImage != null) {
+                  previousMapImage = currentMapImage;
+                }
+                
+                // 새 이미지를 메모리에 저장
+                currentMapImage = icon.getImage();
+                
+                // JLabel에도 표시 (기본 표시용)
                 mapLabel.setIcon(icon);
                 mapLabel.setPreferredSize(new Dimension(icon.getIconWidth(), icon.getIconHeight()));
                 mapLabel.setSize(icon.getIconWidth(), icon.getIconHeight());
@@ -242,16 +364,27 @@ public class MapPanel extends BasePanel {
                 mapLabel.revalidate();
                 mapLabel.repaint();
                 mapLabel.setText(null);
+                
+                // 패널도 다시 그리기
+                if (mapPanel != null) {
+                  mapPanel.repaint();
+                }
+                
+                // 이전 이미지 정리 (메모리 절약)
+                previousMapImage = null;
               } else {
                 mapLabel.setText("지도 로드 실패");
               }
+              isLoadingMap = false;
             });
           } catch (Exception ignored) {
+            isLoadingMap = false;
           }
         }).start();
 
       } catch (Exception ex) {
         ex.printStackTrace();
+        isLoadingMap = false;
       }
     });
   }
@@ -402,41 +535,58 @@ public class MapPanel extends BasePanel {
     return Math.toDegrees(Math.atan(Math.sinh(y)));
   }
 
-  // 지도 클릭 → 가장 가까운 제설함 찾기
+  // 지도 클릭 → 가장 가까운 제설함 찾기 (마커를 직접 클릭했을 때만)
   private void showNearestSnowBoxInfo(int clickX, int clickY) {
     if (snowBoxInfoList.isEmpty())
       return;
 
-    double scale = mapScale();
+    // 클릭한 화면 좌표를 위경도로 변환
+    // Google Static Maps는 Mercator 투영을 사용
+    double scale = 0.002 / Math.pow(2, zoom - 10);
+    double clickLat = centerLat - (clickY - MAP_HEIGHT / 2.0) * scale;
+    double clickLng = centerLng + (clickX - MAP_WIDTH / 2.0) * scale / Math.cos(Math.toRadians(centerLat));
 
-    double centerPixelX = lngToPixelX(centerLng);
-    double centerPixelY = latToPixelY(centerLat);
-
-    double markerAnchorOffset = 30.0;
-    double clickPixelX = centerPixelX + (clickX - MAP_WIDTH / 2.0)+markerAnchorOffset/3.2;
-    double clickPixelY = centerPixelY + (clickY - MAP_HEIGHT / 2.0)+markerAnchorOffset;
-
+    // 가장 가까운 제설함 찾기 (위경도 거리 계산)
     SnowBoxInfo nearest = null;
-    double minDistSq = Double.MAX_VALUE;
+    double minDistance = Double.MAX_VALUE;
 
     for (SnowBoxInfo info : snowBoxInfoList) {
-      double px = lngToPixelX(info.location.x); // x = lng
-      double py = latToPixelY(info.location.y); // y = lat
+      // 위경도 거리 계산 (간단한 유클리드 거리)
+      double latDiff = info.location.y - clickLat;
+      double lngDiff = info.location.x - clickLng;
+      double distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
 
-      double dx = px - clickPixelX;
-      double dy = py - clickPixelY;
-      double distSq = dx * dx + dy * dy;
-
-      if (distSq < minDistSq) {
-        minDistSq = distSq;
+      if (distance < minDistance) {
+        minDistance = distance;
         nearest = info;
       }
     }
 
-    double thresholdPx = 15.0;
+    // 마커를 직접 클릭했을 때만 표시하도록 임계값 설정
+    // Google Static Maps 마커는 약 20x34 픽셀 크기
+    // 마커의 픽셀 크기를 위경도로 변환
+    // 줌 레벨이 높을수록 마커가 차지하는 위경도 범위가 작아짐
+    double markerPixelWidth = 20.0;  // 마커 가로 크기 (픽셀)
+    double markerPixelHeight = 34.0; // 마커 세로 크기 (픽셀)
+    
+    // 마커 크기를 위경도로 변환 (더 보수적으로 가로/세로 중 큰 값 사용)
+    double markerSizeInDegrees = Math.max(
+      markerPixelWidth * scale,
+      markerPixelHeight * scale
+    );
+    
+    // 마커 아이콘 영역 내에 클릭했는지 확인 (약간의 여유를 두고 2배로 증가)
+    double threshold = markerSizeInDegrees * 2.0;
 
-    if (nearest != null && minDistSq <= thresholdPx * thresholdPx) {
-      showSnowBoxInfoWindow(nearest);
+    if (nearest != null && minDistance < threshold) {
+      // 정보가 있는 경우에만 표시 (최소한 번호나 위치 정보가 있어야 함)
+      boolean hasInfo = (nearest.sboxNum != null && !nearest.sboxNum.trim().isEmpty()) ||
+                        (nearest.detlCn != null && !nearest.detlCn.trim().isEmpty()) ||
+                        (nearest.mgcNm != null && !nearest.mgcNm.trim().isEmpty());
+      
+      if (hasInfo) {
+        showSnowBoxInfoWindow(nearest);
+      }
     }
   }
 
@@ -444,7 +594,7 @@ public class MapPanel extends BasePanel {
   private void showSnowBoxInfoWindow(SnowBoxInfo info) {
     Window parentWindow = SwingUtilities.getWindowAncestor(this);
     JDialog dialog = new JDialog((Frame) parentWindow, "제설함 정보", true);
-    dialog.setSize(350, 250);
+    dialog.setSize(350, 280);
     dialog.setLocationRelativeTo(parentWindow);
     dialog.setLayout(new BorderLayout());
 
@@ -452,19 +602,29 @@ public class MapPanel extends BasePanel {
     content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
     content.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-    JLabel num = new JLabel("<html><b>제설함 번호:</b> " + info.sboxNum + "</html>");
+    // 제설함 번호 (없으면 "정보 없음" 표시)
+    String sboxNum = (info.sboxNum != null && !info.sboxNum.trim().isEmpty()) 
+        ? info.sboxNum : "정보 없음";
+    JLabel num = new JLabel("<html><b>제설함 번호:</b> " + sboxNum + "</html>");
     num.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
     content.add(num);
     content.add(Box.createVerticalStrut(10));
 
-    JLabel mgc = new JLabel("<html><b>관리기관:</b> " + info.mgcNm + "</html>");
+    // 관리기관 (없으면 "정보 없음" 표시)
+    String mgcNm = (info.mgcNm != null && !info.mgcNm.trim().isEmpty()) 
+        ? info.mgcNm : "정보 없음";
+    JLabel mgc = new JLabel("<html><b>관리기관:</b> " + mgcNm + "</html>");
     content.add(mgc);
     content.add(Box.createVerticalStrut(10));
 
-    JLabel detl = new JLabel("<html><b>위치:</b> " + info.detlCn + "</html>");
+    // 위치 (없으면 "정보 없음" 표시)
+    String detlCn = (info.detlCn != null && !info.detlCn.trim().isEmpty()) 
+        ? info.detlCn : "정보 없음";
+    JLabel detl = new JLabel("<html><b>위치:</b> " + detlCn + "</html>");
     content.add(detl);
     content.add(Box.createVerticalStrut(10));
 
+    // 좌표 (항상 표시)
     JLabel coord = new JLabel(String.format("<html><b>좌표:</b> (%.6f, %.6f)</html>", info.location.y, info.location.x));
     coord.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 11));
     content.add(coord);
