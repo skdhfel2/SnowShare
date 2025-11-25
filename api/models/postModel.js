@@ -78,7 +78,8 @@ class PostModel {
   }
 
   /**
-   * 게시글 삭제
+   * 게시글 삭제 (단순 삭제만 수행)
+   * 트랜잭션은 service 레이어에서 관리합니다.
    */
   static async deletePost(id, userId) {
     try {

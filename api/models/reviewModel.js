@@ -97,7 +97,8 @@ class ReviewModel {
   }
 
   /**
-   * 후기 삭제
+   * 후기 삭제 (단순 삭제만 수행)
+   * 트랜잭션은 service 레이어에서 관리합니다.
    */
   static async deleteReview(id, userId) {
     try {

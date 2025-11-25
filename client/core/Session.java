@@ -3,12 +3,13 @@ package core;
 /**
  * 로그인한 사용자 정보를 저장하는 클래스
  * - userId
- * - token
+ * - username
+ * 세션 기반 인증을 사용하므로 쿠키로 관리됩니다.
  */
 public class Session {
     private static Session instance;
     private String userId;
-    private String token;
+    private String username;
     private boolean isLoggedIn;
     
     private Session() {
@@ -25,9 +26,9 @@ public class Session {
     /**
      * 로그인 정보 저장
      */
-    public void login(String userId, String token) {
+    public void login(String userId, String username) {
         this.userId = userId;
-        this.token = token;
+        this.username = username;
         this.isLoggedIn = true;
     }
     
@@ -36,7 +37,7 @@ public class Session {
      */
     public void logout() {
         this.userId = null;
-        this.token = null;
+        this.username = null;
         this.isLoggedIn = false;
     }
     
@@ -55,10 +56,10 @@ public class Session {
     }
     
     /**
-     * 토큰 반환
+     * 사용자명 반환
      */
-    public String getToken() {
-        return token;
+    public String getUsername() {
+        return username;
     }
 }
 

@@ -1,17 +1,24 @@
 package utils;
 
 import java.io.*;
+import java.net.CookieManager;
+import java.net.CookieStore;
+import java.net.HttpCookie;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
  * 백엔드 API와 통신하는 HTTP 요청 클래스
+ * 세션 쿠키를 자동으로 관리합니다.
  */
 public class ApiClient {
     private static final String BASE_URL = "http://localhost:3000/api";
+    private static final CookieManager cookieManager = new CookieManager();
     
     /**
      * GET 요청
@@ -55,12 +62,41 @@ public class ApiClient {
             conn.setConnectTimeout(5000);
             conn.setReadTimeout(5000);
             
+            // 쿠키 추가 (세션 관리)
+            URI uri = url.toURI();
+            CookieStore cookieStore = cookieManager.getCookieStore();
+            List<HttpCookie> cookies = cookieStore.get(uri);
+            if (cookies != null && !cookies.isEmpty()) {
+                StringBuilder cookieHeader = new StringBuilder();
+                for (HttpCookie cookie : cookies) {
+                    if (cookieHeader.length() > 0) {
+                        cookieHeader.append("; ");
+                    }
+                    cookieHeader.append(cookie.toString());
+                }
+                conn.setRequestProperty("Cookie", cookieHeader.toString());
+            }
+            
             // POST, PUT, DELETE 요청인 경우 데이터 전송
             if ((method.equals("POST") || method.equals("PUT") || method.equals("DELETE")) && data != null) {
                 conn.setDoOutput(true);
                 try (OutputStream os = conn.getOutputStream()) {
                     byte[] input = data.toString().getBytes(StandardCharsets.UTF_8);
                     os.write(input, 0, input.length);
+                }
+            }
+            
+            // 응답에서 쿠키 저장
+            String setCookieHeader = conn.getHeaderField("Set-Cookie");
+            if (setCookieHeader != null) {
+                List<String> cookieHeaders = conn.getHeaderFields().get("Set-Cookie");
+                if (cookieHeaders != null) {
+                    for (String cookieHeader : cookieHeaders) {
+                        List<HttpCookie> httpCookies = HttpCookie.parse(cookieHeader);
+                        for (HttpCookie cookie : httpCookies) {
+                            cookieStore.add(uri, cookie);
+                        }
+                    }
                 }
             }
             
@@ -87,9 +123,21 @@ public class ApiClient {
                 
                 return new JSONObject(response.toString());
             }
+        } catch (Exception e) {
+            if (e instanceof IOException) {
+                throw (IOException) e;
+            }
+            throw new IOException("요청 처리 중 오류 발생: " + e.getMessage(), e);
         } finally {
             conn.disconnect();
         }
+    }
+    
+    /**
+     * 쿠키 초기화 (로그아웃 시 사용)
+     */
+    public static void clearCookies() {
+        cookieManager.getCookieStore().removeAll();
     }
     
     /**

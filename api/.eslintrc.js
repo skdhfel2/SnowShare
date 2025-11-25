@@ -17,5 +17,13 @@ module.exports = {
     'no-await-in-loop': 'off', // 초기화 스크립트에서 필요
     'no-restricted-syntax': 'off', // for...of 루프 허용
     'no-unused-vars': ['error', { argsIgnorePattern: '^_' }], // _로 시작하는 매개변수 무시
+    'import/no-extraneous-dependencies': [
+      'error',
+      {
+        devDependencies: false,
+        optionalDependencies: false,
+        peerDependencies: false,
+      },
+    ],
   },
 };

@@ -1,6 +1,9 @@
 package components.auth;
 
 import core.BasePanel;
+import core.Navigator;
+import utils.ApiClient;
+import org.json.JSONObject;
 import javax.swing.*;
 import java.awt.*;
 
@@ -11,7 +14,6 @@ public class RegisterPanel extends BasePanel {
     private JTextField idField;
     private JPasswordField passwordField;
     private JPasswordField confirmPasswordField;
-    private JTextField emailField;
     private JButton registerButton;
     
     public RegisterPanel() {
@@ -66,34 +68,23 @@ public class RegisterPanel extends BasePanel {
         gbc.anchor = GridBagConstraints.WEST;
         add(confirmPasswordField, gbc);
         
-        // 이메일 입력
-        gbc.gridy = 4;
-        gbc.gridx = 0;
-        gbc.anchor = GridBagConstraints.EAST;
-        add(new JLabel("이메일:"), gbc);
-        
-        emailField = new JTextField(15);
-        gbc.gridx = 1;
-        gbc.anchor = GridBagConstraints.WEST;
-        add(emailField, gbc);
-        
         // 회원가입 버튼
         registerButton = new JButton("회원가입");
         registerButton.setFont(FONT_BODY);
-        gbc.gridy = 5;
+        gbc.gridy = 4;
         gbc.gridx = 0;
         gbc.gridwidth = 2;
         gbc.anchor = GridBagConstraints.CENTER;
         add(registerButton, gbc);
         
-        // 회원가입 버튼 이벤트 (추후 hooks로 분리 가능)
+        // 회원가입 버튼 이벤트
         registerButton.addActionListener(e -> {
-            String id = idField.getText();
+            String username = idField.getText().trim();
             String password = new String(passwordField.getPassword());
             String confirmPassword = new String(confirmPasswordField.getPassword());
-            String email = emailField.getText();
             
-            if (id.isEmpty() || password.isEmpty() || email.isEmpty()) {
+            // 입력 검증
+            if (username.isEmpty() || password.isEmpty()) {
                 showError("모든 필드를 입력해주세요.");
                 return;
             }
@@ -103,8 +94,56 @@ public class RegisterPanel extends BasePanel {
                 return;
             }
             
-            // TODO: 실제 회원가입 로직 구현 (API 호출)
-            showInfo("회원가입 기능은 추후 구현 예정입니다.");
+            if (password.length() < 6) {
+                showError("비밀번호는 최소 6자 이상이어야 합니다.");
+                return;
+            }
+            
+            if (username.length() < 3 || username.length() > 50) {
+                showError("사용자명은 3자 이상 50자 이하여야 합니다.");
+                return;
+            }
+            
+            // 회원가입 처리 (별도 스레드에서 실행)
+            registerButton.setEnabled(false);
+            new Thread(() -> {
+                try {
+                    JSONObject requestData = new JSONObject();
+                    requestData.put("username", username);
+                    requestData.put("password", password);
+                    
+                    JSONObject response = ApiClient.post("/auth/register", requestData);
+                    
+                    SwingUtilities.invokeLater(() -> {
+                        registerButton.setEnabled(true);
+                        
+                        if (response.has("success") && response.getBoolean("success")) {
+                            // 회원가입 성공
+                            showInfo("회원가입이 완료되었습니다!");
+                            
+                            // 로그인 화면으로 이동
+                            Navigator.getInstance().goTo("Login");
+                            
+                            // 입력 필드 초기화
+                            idField.setText("");
+                            passwordField.setText("");
+                            confirmPasswordField.setText("");
+                        } else {
+                            // 회원가입 실패
+                            String message = response.has("message") 
+                                ? response.getString("message") 
+                                : "회원가입에 실패했습니다.";
+                            showError(message);
+                        }
+                    });
+                } catch (Exception ex) {
+                    SwingUtilities.invokeLater(() -> {
+                        registerButton.setEnabled(true);
+                        showError("회원가입 중 오류가 발생했습니다: " + ex.getMessage());
+                        ex.printStackTrace();
+                    });
+                }
+            }).start();
         });
     }
 }

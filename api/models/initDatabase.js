@@ -34,6 +34,32 @@ async function initDatabase() {
 
     const connection = await db.getConnection();
 
+    // 기존 users 테이블에서 email 컬럼 제거 (마이그레이션)
+    try {
+      const [columns] = await connection.query(
+        `SELECT COLUMN_NAME 
+         FROM information_schema.COLUMNS 
+         WHERE TABLE_SCHEMA = DATABASE() 
+         AND TABLE_NAME = 'users' 
+         AND COLUMN_NAME = 'email'`,
+      );
+      if (columns.length > 0) {
+        logger.info('Removing email column from users table...');
+        await connection.query('ALTER TABLE users DROP COLUMN email');
+        // 인덱스가 있으면 제거 시도
+        try {
+          await connection.query('ALTER TABLE users DROP INDEX idx_email');
+        } catch (idxError) {
+          // 인덱스가 없으면 무시
+          logger.info('idx_email index does not exist, skipping...');
+        }
+        logger.info('Email column removed successfully');
+      }
+    } catch (migrationError) {
+      // 마이그레이션 실패해도 계속 진행 (테이블이 없을 수도 있음)
+      logger.info('Migration check completed (table may not exist yet)');
+    }
+
     for (const [index, statement] of statements.entries()) {
       if (statement) {
         try {

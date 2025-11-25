@@ -1,4 +1,5 @@
 const PostModel = require('../models/postModel');
+const PostService = require('../services/postService');
 const logger = require('../lib/logger');
 
 /**
@@ -151,28 +152,16 @@ const postController = {
         });
       }
 
-      // 작성자 확인
-      const isAuthor = await PostModel.isAuthor(id, user_id);
-      if (!isAuthor) {
-        return res.status(403).json({
-          success: false,
-          message: '본인의 게시글만 삭제할 수 있습니다.',
-        });
+      // Service 레이어에서 트랜잭션 처리
+      const result = await PostService.deletePost(id, user_id);
+
+      if (!result.success) {
+        const statusCode =
+          result.message === '본인의 게시글만 삭제할 수 있습니다.' ? 403 : 404;
+        return res.status(statusCode).json(result);
       }
 
-      const success = await PostModel.deletePost(id, user_id);
-
-      if (!success) {
-        return res.status(404).json({
-          success: false,
-          message: '게시글을 찾을 수 없습니다.',
-        });
-      }
-
-      res.json({
-        success: true,
-        message: '게시글이 삭제되었습니다.',
-      });
+      res.json(result);
     } catch (error) {
       logger.error('Error in deletePost:', error);
       res.status(500).json({

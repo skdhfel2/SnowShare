@@ -5,24 +5,27 @@
 # Compiled class files
 *.class
 
-# Compiled Java modules
+# Fat JAR, WAR, EAR
 *.jar
 *.war
 *.ear
+
+# Allow specific local JARs (예: json 라이브러리)
+!client/lib/json-20231013.jar
 
 # Java crash logs
 hs_err_pid*
 replay_pid*
 
-# Java Swing project bin folders
+# Java build/output directories
 bin/
+out/
 */bin/
 client/bin/
 client/out/
-out/
 
 ############################
-# Build tools
+# Build tools (Maven / Gradle)
 ############################
 
 # Maven
@@ -49,10 +52,21 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-package-lock.json
+
+# API env files
 .env
 .env.*
+api/.env
 
+############################
+# Logs / Temp
+############################
+
+*.log
+logs/
+temp/
+tmp/
+.cache/
 
 ############################
 # OS-specific
@@ -69,49 +83,28 @@ ehthumbs.db
 desktop.ini
 
 ############################
-# Logs / Temporary files
-############################
-
-*.log
-logs/
-temp/
-tmp/
-.cache/
-
-############################
 # IDE specific
 ############################
 
-# IntelliJ / IDEA
+# IntelliJ IDEA
 .idea/
 *.iml
 *.ipr
 *.iws
 
-# OS 파일
-.DS_Store
-Thumbs.db
-*.swp
-*.swo
-*~
-
-# 로그 파일
-*.log
-logs/
-
-# 환경 변수
-.env
-.env.local
-
-# Node.js (API)
-api/node_modules/
-api/.env
-
-# 기타
-*.jar
-!client/lib/json-20231013.jar
-
 # Eclipse
 .classpath
 .project
 .settings/
+
+############################
+# 기타 프로젝트 파일
+############################
+
+# Swap files
+*.swp
+*.swo
+*~
+
+# Local environment
+.env.local

@@ -1,6 +1,10 @@
 package components.auth;
 
 import core.BasePanel;
+import core.Session;
+import core.Navigator;
+import utils.ApiClient;
+import org.json.JSONObject;
 import javax.swing.*;
 import java.awt.*;
 
@@ -63,18 +67,62 @@ public class LoginPanel extends BasePanel {
         gbc.fill = GridBagConstraints.NONE;
         add(loginButton, gbc);
         
-        // 로그인 버튼 이벤트 (추후 hooks로 분리 가능)
+        // 로그인 버튼 이벤트
         loginButton.addActionListener(e -> {
-            String id = idField.getText();
+            String username = idField.getText().trim();
             String password = new String(passwordField.getPassword());
             
-            if (id.isEmpty() || password.isEmpty()) {
+            if (username.isEmpty() || password.isEmpty()) {
                 showError("ID와 비밀번호를 입력해주세요.");
                 return;
             }
             
-            // TODO: 실제 로그인 로직 구현 (API 호출)
-            showInfo("로그인 기능은 추후 구현 예정입니다.");
+            // 로그인 처리 (별도 스레드에서 실행)
+            loginButton.setEnabled(false);
+            new Thread(() -> {
+                try {
+                    JSONObject requestData = new JSONObject();
+                    requestData.put("username", username);
+                    requestData.put("password", password);
+                    
+                    JSONObject response = ApiClient.post("/auth/login", requestData);
+                    
+                    SwingUtilities.invokeLater(() -> {
+                        loginButton.setEnabled(true);
+                        
+                        if (response.has("success") && response.getBoolean("success")) {
+                            // 로그인 성공
+                            JSONObject userData = response.getJSONObject("data").getJSONObject("user");
+                            Session session = Session.getInstance();
+                            session.login(
+                                String.valueOf(userData.getInt("id")),
+                                userData.getString("username")
+                            );
+                            
+                            showInfo("로그인 성공!");
+                            
+                            // 홈 화면으로 이동
+                            Navigator.getInstance().goTo("Home");
+                            
+                            // 입력 필드 초기화
+                            idField.setText("");
+                            passwordField.setText("");
+                        } else {
+                            // 로그인 실패
+                            String message = response.has("message") 
+                                ? response.getString("message") 
+                                : "로그인에 실패했습니다.";
+                            showError(message);
+                        }
+                    });
+                } catch (Exception ex) {
+                    SwingUtilities.invokeLater(() -> {
+                        loginButton.setEnabled(true);
+                        showError("로그인 중 오류가 발생했습니다: " + ex.getMessage());
+                        ex.printStackTrace();
+                    });
+                }
+            }).start();
         });
     }
 }
