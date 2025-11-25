@@ -24,7 +24,7 @@ public class NewsService {
         try {
             String rssUrl = String.format(
                     "https://news.google.com/rss/search?q=%s&hl=ko&gl=KR&ceid=KR:ko",
-                    URLEncoder.encode(query, StandardCharsets.UTF_8));
+                    URLEncoder.encode(query, "UTF-8"));
             
             HttpURLConnection connection = (HttpURLConnection) new URL(rssUrl).openConnection();
             connection.setRequestMethod("GET");
