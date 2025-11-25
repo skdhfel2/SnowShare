@@ -11,10 +11,9 @@ class ReviewModel {
   static async getAllReviews() {
     try {
       const [rows] = await db.query(
-        `SELECT r.*, u.username 
-         FROM reviews r 
-         LEFT JOIN users u ON r.user_id = u.id 
-         ORDER BY r.created_at DESC`,
+        `SELECT * 
+         FROM reviews 
+         ORDER BY created_at DESC`,
       );
       return rows;
     } catch (error) {
@@ -29,10 +28,9 @@ class ReviewModel {
   static async getReviewById(id) {
     try {
       const [rows] = await db.query(
-        `SELECT r.*, u.username 
-         FROM reviews r 
-         LEFT JOIN users u ON r.user_id = u.id 
-         WHERE r.id = ?`,
+        `SELECT * 
+         FROM reviews 
+         WHERE id = ?`,
         [id],
       );
       return rows[0] || null;
@@ -48,11 +46,10 @@ class ReviewModel {
   static async getReviewsBySaltboxId(saltboxId) {
     try {
       const [rows] = await db.query(
-        `SELECT r.*, u.username 
-         FROM reviews r 
-         LEFT JOIN users u ON r.user_id = u.id 
-         WHERE r.saltbox_id = ? 
-         ORDER BY r.created_at DESC`,
+        `SELECT * 
+         FROM reviews 
+         WHERE saltbox_id = ? 
+         ORDER BY created_at DESC`,
         [saltboxId],
       );
       return rows;

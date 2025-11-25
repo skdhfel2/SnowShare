@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const fs = require('fs');
 const path = require('path');
 const db = require('../lib/db');
@@ -17,15 +19,42 @@ async function initDatabase() {
     const statements = sql
       .split(';')
       .map((stmt) => stmt.trim())
-      .filter((stmt) => stmt.length > 0 && !stmt.startsWith('--'));
+      .filter((stmt) => {
+        // 빈 문장 제거 및 주석만 있는 줄 제거
+        if (stmt.length === 0) return false;
+        // 주석만 있는 줄 제거 (--로 시작하는 줄)
+        const lines = stmt.split('\n').map((line) => line.trim());
+        const hasNonComment = lines.some(
+          (line) => line.length > 0 && !line.startsWith('--'),
+        );
+        return hasNonComment;
+      });
+
+    logger.info(`Found ${statements.length} SQL statements to execute`);
 
     const connection = await db.getConnection();
 
-    for (const statement of statements) {
+    for (const [index, statement] of statements.entries()) {
       if (statement) {
-        await connection.query(statement);
+        try {
+          const statementNum = index + 1;
+          logger.info(
+            `Executing SQL statement ${statementNum}/${statements.length}`,
+          );
+          await connection.query(statement);
+          logger.info(`Successfully executed statement ${statementNum}`);
+        } catch (stmtError) {
+          logger.error(`Error executing statement ${index + 1}:`, stmtError);
+          logger.error(`Failed statement: ${statement.substring(0, 100)}...`);
+          throw stmtError;
+        }
       }
     }
+
+    // 생성된 테이블 확인
+    const [allTables] = await connection.query('SHOW TABLES');
+    const tableNames = allTables.map((row) => Object.values(row)[0]);
+    logger.info(`Created tables: ${tableNames.join(', ')}`);
 
     connection.release();
     logger.info('Database tables initialized successfully');

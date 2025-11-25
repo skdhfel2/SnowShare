@@ -11,10 +11,9 @@ class PostModel {
   static async getAllPosts() {
     try {
       const [rows] = await db.query(
-        `SELECT p.*, u.username 
-         FROM posts p 
-         LEFT JOIN users u ON p.user_id = u.id 
-         ORDER BY p.created_at DESC`,
+        `SELECT * 
+         FROM posts 
+         ORDER BY created_at DESC`,
       );
       return rows;
     } catch (error) {
@@ -29,10 +28,9 @@ class PostModel {
   static async getPostById(id) {
     try {
       const [rows] = await db.query(
-        `SELECT p.*, u.username 
-         FROM posts p 
-         LEFT JOIN users u ON p.user_id = u.id 
-         WHERE p.id = ?`,
+        `SELECT * 
+         FROM posts 
+         WHERE id = ?`,
         [id],
       );
       return rows[0] || null;

@@ -6,21 +6,33 @@ import java.awt.*;
 
 /**
  * 커뮤니티 화면 (게시판)
+ * 자유게시판과 후기게시판을 탭으로 표시
  */
 public class CommunityPanel extends BasePanel {
+    private JTabbedPane tabbedPane;
+    private FreeBoardPanel freeBoardPanel;
+    // TODO: ReviewPanel 추가 예정
     
     public CommunityPanel() {
         initializePanel();
     }
     
     private void initializePanel() {
-        setLayout(new GridBagLayout());
+        setLayout(new BorderLayout());
         
-        JLabel label = new JLabel("커뮤니티(게시판)가 표시될 영역입니다.");
-        label.setFont(FONT_INTRO_BODY);
+        // 탭 패널 생성
+        tabbedPane = new JTabbedPane();
+        tabbedPane.setFont(new Font("맑은 고딕", Font.PLAIN, 14));
         
-        GridBagConstraints gbc = new GridBagConstraints();
-        add(label, gbc);
+        // 자유게시판 탭
+        freeBoardPanel = new FreeBoardPanel();
+        tabbedPane.addTab("자유게시판", freeBoardPanel);
+        
+        // TODO: 후기게시판 탭 추가
+        // ReviewPanel reviewPanel = new ReviewPanel();
+        // tabbedPane.addTab("후기게시판", reviewPanel);
+        
+        add(tabbedPane, BorderLayout.CENTER);
     }
 }
 

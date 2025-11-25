@@ -3,6 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const logger = require('./lib/logger');
+const { initDatabase } = require('./models/initDatabase');
 const testRoutes = require('./routes/test');
 const postRoutes = require('./routes/posts');
 const reviewRoutes = require('./routes/reviews');
@@ -49,8 +50,21 @@ app.use((req, res) => {
   res.status(404).json({ error: { message: 'Route not found', status: 404 } });
 });
 
-app.listen(PORT, () => {
-  logger.info(`Server is running on port ${PORT}`);
-});
+// 서버 시작 전 데이터베이스 초기화
+async function startServer() {
+  try {
+    await initDatabase();
+    logger.info('Database initialization completed');
+
+    app.listen(PORT, () => {
+      logger.info(`Server is running on port ${PORT}`);
+    });
+  } catch (error) {
+    logger.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 module.exports = app;
