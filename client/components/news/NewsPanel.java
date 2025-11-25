@@ -13,7 +13,7 @@ import java.net.URI;
 import java.text.SimpleDateFormat;
 
 /**
- * 관련뉴스 화면
+ * 뉴스 패널 UI 컴포넌트
  */
 public class NewsPanel extends BasePanel {
     private JList<News> newsList;
@@ -384,4 +384,132 @@ public class NewsPanel extends BasePanel {
             return this;
         }
     }
+    
+    // 링크 섹션
+    html.append("<div style='background-color: #FFF8E1; padding: 12px 15px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #FFA500;'>");
+    html.append("<span style='color: #000000; font-weight: bold; font-size: 13px;'>원문 링크</span>");
+    html.append("</div>");
+    html.append("<div style='padding: 10px 15px; background-color: #F5F5F5; border-radius: 4px; margin-bottom: 15px; word-break: break-all;'>");
+    html.append("<p style='color: #000000; font-size: 12px; margin: 0; font-family: monospace;'>");
+    html.append(escapeHtml(news.link));
+    html.append("</p></div>");
+    
+    html.append("<div style='text-align: center; padding: 10px; background-color: #E3F2FD; border-radius: 6px; margin-top: 15px;'>");
+    html.append("<p style='color: #000000; font-size: 12px; margin: 0; font-style: italic;'>");
+    html.append("더블클릭하면 브라우저에서 원문을 볼 수 있습니다");
+    html.append("</p></div>");
+    
+    html.append("</body></html>");
+    
+    newsDetailEditor.setText(html.toString());
+    newsDetailEditor.setCaretPosition(0);
+  }
+  
+  private void generateAISummary() {
+    if (currentSelectedNews == null) {
+      showInfo("뉴스를 먼저 선택해주세요.");
+      return;
+    }
+    
+    aiSummaryButton.setEnabled(false);
+    aiSummaryButton.setText("🤖 AI 요약 중...");
+    newsStatusLabel.setText("AI가 기사를 요약하는 중입니다...");
+    
+    new Thread(() -> {
+      try {
+        String articleText = cleanHtmlText(currentSelectedNews.description);
+        if (articleText == null || articleText.trim().isEmpty()) {
+          articleText = currentSelectedNews.title;
+        }
+        
+        String summary = aiSummarizer.summarize(articleText);
+        
+        SwingUtilities.invokeLater(() -> {
+          updateNewsDetail(currentSelectedNews, summary);
+          aiSummaryButton.setEnabled(true);
+          aiSummaryButton.setText("🤖 AI 요약");
+          newsStatusLabel.setText("AI 요약이 완료되었습니다.");
+        });
+      } catch (Exception e) {
+        SwingUtilities.invokeLater(() -> {
+          showError("AI 요약 생성 중 오류가 발생했습니다:\n" + e.getMessage());
+          aiSummaryButton.setEnabled(true);
+          aiSummaryButton.setText("🤖 AI 요약");
+          newsStatusLabel.setText("AI 요약 실패: " + e.getMessage());
+        });
+      }
+    }).start();
+  }
+  
+  private void openNewsInBrowser(String url) {
+    try {
+      if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+        Desktop.getDesktop().browse(new URI(url));
+        newsStatusLabel.setText("브라우저에서 뉴스를 열었습니다: " + url);
+      } else {
+        showInfo("브라우저를 열 수 없습니다.\n링크: " + url);
+      }
+    } catch (Exception e) {
+      showError("브라우저를 열 수 없습니다: " + e.getMessage() + "\n링크: " + url);
+    }
+  }
+  
+  private String escapeHtml(String text) {
+    if (text == null) return "";
+    return text.replace("&", "&amp;")
+               .replace("<", "&lt;")
+               .replace(">", "&gt;")
+               .replace("\"", "&quot;")
+               .replace("'", "&#39;");
+  }
+  
+  private String cleanHtmlText(String html) {
+    if (html == null || html.isEmpty()) {
+      return "";
+    }
+    
+    String text = html;
+    text = text.replace("&nbsp;", " ");
+    text = text.replace("&amp;", "&");
+    text = text.replace("&lt;", "<");
+    text = text.replace("&gt;", ">");
+    text = text.replace("&quot;", "\"");
+    text = text.replace("&#39;", "'");
+    text = text.replace("&apos;", "'");
+    text = text.replaceAll("<[^>]+>", "");
+    text = text.replaceAll("\\s+", " ");
+    text = text.replaceAll("\\n\\s*\\n", "\n\n");
+    text = text.trim();
+    
+    return text;
+  }
+  
+  /**
+   * 뉴스 리스트 셀 렌더러
+   */
+  private class NewsListCellRenderer extends DefaultListCellRenderer {
+    @Override
+    public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+        boolean isSelected, boolean cellHasFocus) {
+      super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+      if (value instanceof NewsItem) {
+        NewsItem news = (NewsItem) value;
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+        setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
+        setFont(new Font("맑은 고딕", Font.PLAIN, 12));
+        if (isSelected) {
+          setBackground(new Color(135, 206, 250));
+          setForeground(Color.WHITE);
+          setText(String.format("<html><b>%s</b><br/><font size='-1'>📅 %s</font></html>",
+              news.title, dateFormat.format(news.pubDate)));
+        } else {
+          setBackground(index % 2 == 0 ? Color.WHITE : new Color(250, 250, 250));
+          setForeground(new Color(50, 50, 50));
+          setText(String.format("<html><b>%s</b><br/><font size='-1' color='gray'>📅 %s</font></html>",
+              news.title, dateFormat.format(news.pubDate)));
+        }
+      }
+      return this;
+    }
+  }
 }
