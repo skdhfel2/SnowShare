@@ -34,7 +34,7 @@ public class SnowRemovalMap extends JFrame {
   private static final String SNOWBOX_ENDPOINT =
       "https://api.odcloud.kr/api/15086762/v1/uddi:b2f84553-0a08-4d35-b444-f2a9b0324c04";
   private static final String LOCAL_JSON_PATH =
-      "client/public/data/seoul_snowbox_location.json";
+      "public/data/seoul_snowbox_location.json";
   private static final boolean USE_LOCAL_FILE = true; // 로컬 파일 사용 여부
   private static final int MAP_WIDTH = 800;
   private static final int MAP_HEIGHT = 600;
@@ -271,9 +271,10 @@ public class SnowRemovalMap extends JFrame {
     try {
       String json;
       if (USE_LOCAL_FILE) {
-        // 로컬 JSON 파일 읽기
-        System.out.println("로컬 JSON 파일 읽기: " + LOCAL_JSON_PATH);
-        json = readAll(Files.newInputStream(Paths.get(LOCAL_JSON_PATH)));
+        // 로컬 JSON 파일 읽기 - 실행 위치에 따라 경로 동적 찾기
+        String jsonPath = findJsonPath();
+        System.out.println("로컬 JSON 파일 읽기: " + jsonPath);
+        json = readAll(Files.newInputStream(Paths.get(jsonPath)));
         System.out.println("JSON 파일 크기: " + json.length() + " 문자");
       } else {
         // API 호출
@@ -694,6 +695,27 @@ public class SnowRemovalMap extends JFrame {
     
     // Point2D.Double: x = 경도(longitude), y = 위도(latitude)
     return new Point2D.Double(lng, lat);
+  }
+
+  /**
+   * JSON 파일 경로를 동적으로 찾기
+   * - client 폴더에서 실행: public/data/seoul_snowbox_location.json
+   * - 프로젝트 루트에서 실행: client/public/data/seoul_snowbox_location.json
+   */
+  private String findJsonPath() {
+    String[] possiblePaths = {
+        "public/data/seoul_snowbox_location.json",
+        "client/public/data/seoul_snowbox_location.json"
+    };
+    
+    for (String path : possiblePaths) {
+      if (Files.exists(Paths.get(path))) {
+        return path;
+      }
+    }
+    
+    // 둘 다 없으면 기본값 반환
+    return LOCAL_JSON_PATH;
   }
 
   private String readAll(InputStream stream) throws IOException {

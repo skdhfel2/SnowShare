@@ -26,13 +26,13 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-public class MapPanel extends JFrame {
+public class MapPanel extends BasePanel {
 
   private static final String GOOGLE_MAPS_API_KEY = "AIzaSyAmqp1khCMy-wdof_llEq_XMPvdHO2mgmc";
   private static final String SNOWBOX_API_KEY = "596765645667796f37336a497a4c4c";
   private static final String SNOWBOX_ENDPOINT = "https://api.odcloud.kr/api/15086762/v1/uddi:b2f84553-0a08-4d35-b444-f2a9b0324c04";
 
-  private static final String LOCAL_JSON_PATH = "client/public/data/seoul_snowbox_location.json";
+  private static final String LOCAL_JSON_PATH = "public/data/seoul_snowbox_location.json";
   private static final boolean USE_LOCAL_FILE = true;
 
   private static final int MAP_WIDTH = 800;
@@ -75,11 +75,6 @@ public class MapPanel extends JFrame {
 
   public MapPanel() {
     coordConverter = new CoordinateConverter();
-
-    setTitle("서울시 제설함 지도 (Gson + Google Static Map)");
-    setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    setSize(MAP_WIDTH + 300, MAP_HEIGHT);
-    setLocationRelativeTo(null);
     setLayout(new BorderLayout());
 
     // 제설함 리스트 UI 구성
@@ -181,8 +176,6 @@ public class MapPanel extends JFrame {
       zoom = Math.max(5, Math.min(18, zoom));
       loadMap();
     });
-
-    setVisible(true);
   }
 
   // 지도 로딩
@@ -269,7 +262,9 @@ public class MapPanel extends JFrame {
       String json;
 
       if (USE_LOCAL_FILE) {
-        json = readAll(Files.newInputStream(Paths.get(LOCAL_JSON_PATH)));
+        // 실행 위치에 따라 경로 동적 찾기
+        String jsonPath = findJsonPath(); 
+        json = readAll(Files.newInputStream(Paths.get(jsonPath)));
       } else {
         String url = SNOWBOX_ENDPOINT + "?page=1&perPage=1000&returnType=JSON&serviceKey="
             + URLEncoder.encode(SNOWBOX_API_KEY, "UTF-8");
@@ -447,9 +442,10 @@ public class MapPanel extends JFrame {
 
   // 제설함 정보창 UI 표시
   private void showSnowBoxInfoWindow(SnowBoxInfo info) {
-    JDialog dialog = new JDialog(this, "제설함 정보", true);
+    Window parentWindow = SwingUtilities.getWindowAncestor(this);
+    JDialog dialog = new JDialog((Frame) parentWindow, "제설함 정보", true);
     dialog.setSize(350, 250);
-    dialog.setLocationRelativeTo(this);
+    dialog.setLocationRelativeTo(parentWindow);
     dialog.setLayout(new BorderLayout());
 
     JPanel content = new JPanel();
@@ -486,6 +482,27 @@ public class MapPanel extends JFrame {
     dialog.setVisible(true);
   }
 
+  /**
+   * JSON 파일 경로를 동적으로 찾기
+   * - client 폴더에서 실행: public/data/seoul_snowbox_location.json
+   * - 프로젝트 루트에서 실행: client/public/data/seoul_snowbox_location.json
+   */
+  private String findJsonPath() {
+    String[] possiblePaths = {
+        "public/data/seoul_snowbox_location.json",
+        "client/public/data/seoul_snowbox_location.json"
+    };
+    
+    for (String path : possiblePaths) {
+      if (Files.exists(Paths.get(path))) {
+        return path;
+      }
+    }
+    
+    // 둘 다 없으면 기본값 반환
+    return LOCAL_JSON_PATH;
+  }
+
   private String readAll(InputStream stream) throws IOException {
     if (stream == null)
       return "";
@@ -499,7 +516,4 @@ public class MapPanel extends JFrame {
     }
   }
 
-  public static void main(String[] args) {
-    SwingUtilities.invokeLater(MapPanel::new);
-  }
 }
