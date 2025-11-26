@@ -87,6 +87,33 @@ async function initDatabase() {
       logger.error('Error ensuring view_count columns:', viewColError);
     }
 
+    // comments 테이블의 post_type ENUM에 'snowbox' 추가
+    try {
+      const [columns] = await connection.query(
+        `SELECT COLUMN_TYPE 
+         FROM information_schema.COLUMNS 
+         WHERE TABLE_SCHEMA = DATABASE() 
+           AND TABLE_NAME = 'comments' 
+           AND COLUMN_NAME = 'post_type'`,
+      );
+      if (columns.length > 0) {
+        const columnType = columns[0].COLUMN_TYPE;
+        // 'snowbox'가 포함되어 있지 않으면 추가
+        if (!columnType.includes('snowbox')) {
+          logger.info(
+            "Adding 'snowbox' to post_type ENUM in comments table...",
+          );
+          await connection.query(
+            `ALTER TABLE comments 
+             MODIFY COLUMN post_type ENUM('post', 'review', 'snowbox') NOT NULL DEFAULT 'post' COMMENT '게시글 타입'`,
+          );
+          logger.info("'snowbox' added to post_type ENUM successfully");
+        }
+      }
+    } catch (postTypeError) {
+      logger.error('Error ensuring post_type ENUM:', postTypeError);
+    }
+
     for (const [index, statement] of statements.entries()) {
       if (statement) {
         try {

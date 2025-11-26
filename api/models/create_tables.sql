@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS reviews (
 CREATE TABLE IF NOT EXISTS comments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     post_id INT NOT NULL COMMENT '게시글 ID (posts 또는 reviews)',
-    post_type ENUM('post', 'review') NOT NULL DEFAULT 'post' COMMENT '게시글 타입',
+    post_type ENUM('post', 'review', 'snowbox') NOT NULL DEFAULT 'post' COMMENT '게시글 타입',
     user_id VARCHAR(50) NOT NULL,
     content TEXT NOT NULL,
     parent_comment_id INT NULL COMMENT '대댓글인 경우 부모 댓글 ID',

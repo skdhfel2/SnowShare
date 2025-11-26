@@ -17,6 +17,7 @@ public class Comment {
     private String content;
     private Integer parentCommentId;
     private String createdAt;
+    private Integer rating; // 제설함 댓글인 경우 별점
     private List<Comment> replies;
     
     public Comment() {
@@ -35,6 +36,9 @@ public class Comment {
             this.parentCommentId = json.optInt("parent_comment_id", 0);
         }
         this.createdAt = json.optString("created_at", "");
+        if (!json.isNull("rating")) {
+            this.rating = json.optInt("rating", 0);
+        }
 
         // 대댓글(replies) 파싱 (있을 수도 있고 없을 수도 있음)
         JSONArray repliesArray = json.optJSONArray("replies");
@@ -75,6 +79,9 @@ public class Comment {
     
     public List<Comment> getReplies() { return replies; }
     public void setReplies(List<Comment> replies) { this.replies = replies; }
+    
+    public Integer getRating() { return rating; }
+    public void setRating(Integer rating) { this.rating = rating; }
     
     public JSONObject toJSON() {
         JSONObject json = new JSONObject();

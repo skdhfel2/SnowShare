@@ -10,14 +10,27 @@ class CommentModel {
    */
   static async getCommentsByPostId(postId, postType = 'post') {
     try {
-      const [rows] = await db.query(
-        `SELECT c.*, u.username 
-         FROM comments c 
-         LEFT JOIN users u ON c.user_id = u.id 
-         WHERE c.post_id = ? AND c.post_type = ? 
-         ORDER BY c.created_at ASC`,
-        [postId, postType],
-      );
+      // 제설함(post_type='snowbox')인 경우 reviews 테이블과 JOIN하여 별점 정보도 가져오기
+      let query;
+      if (postType === 'snowbox') {
+        query = `SELECT c.*, u.username, r.rating 
+                 FROM comments c 
+                 LEFT JOIN users u ON c.user_id = u.id 
+                 LEFT JOIN reviews r ON r.saltbox_id = c.post_id 
+                                    AND r.user_id = c.user_id 
+                                    AND r.content = c.content
+                                    AND ABS(TIMESTAMPDIFF(SECOND, r.created_at, c.created_at)) <= 5
+                 WHERE c.post_id = ? AND c.post_type = ? 
+                 ORDER BY c.created_at ASC`;
+      } else {
+        query = `SELECT c.*, u.username 
+                 FROM comments c 
+                 LEFT JOIN users u ON c.user_id = u.id 
+                 WHERE c.post_id = ? AND c.post_type = ? 
+                 ORDER BY c.created_at ASC`;
+      }
+
+      const [rows] = await db.query(query, [postId, postType]);
 
       // 부모 댓글과 대댓글을 분리하여 계층 구조 생성
       const parentComments = rows.filter(

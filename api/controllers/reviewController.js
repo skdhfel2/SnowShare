@@ -1,4 +1,5 @@
 const ReviewModel = require('../models/reviewModel');
+const CommentModel = require('../models/commentModel');
 const ReviewService = require('../services/reviewService');
 const logger = require('../lib/logger');
 
@@ -112,6 +113,20 @@ const reviewController = {
         rating,
         content,
       });
+
+      // 후기 작성 시 제설함 댓글에도 자동 생성
+      try {
+        await CommentModel.createComment({
+          post_id: saltbox_id,
+          post_type: 'snowbox',
+          user_id,
+          content,
+          parent_comment_id: null,
+        });
+      } catch (commentError) {
+        // 댓글 생성 실패해도 후기는 성공했으므로 경고만 로그
+        logger.warn('Failed to create comment from review:', commentError);
+      }
 
       res.status(201).json({
         success: true,

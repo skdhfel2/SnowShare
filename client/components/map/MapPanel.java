@@ -62,12 +62,14 @@ public class MapPanel extends BasePanel {
 
   // 제설함 정보 구조체
   private static class SnowBoxInfo {
+    int id;  // 제설함 ID (SnowBoxStore의 ID와 매핑)
     Point2D.Double location;
     String sboxNum;
     String mgcNm;
     String detlCn;
 
-    SnowBoxInfo(Point2D.Double location, String sboxNum, String mgcNm, String detlCn) {
+    SnowBoxInfo(int id, Point2D.Double location, String sboxNum, String mgcNm, String detlCn) {
+      this.id = id;
       this.location = location;
       this.sboxNum = sboxNum;
       this.mgcNm = mgcNm;
@@ -430,11 +432,15 @@ public class MapPanel extends BasePanel {
       dataArray = root.getAsJsonArray("records");
 
     snowBoxList.clear();
+    snowBoxInfoList.clear();
     if (dataArray == null)
       return;
 
+    int index = 0;  // 인덱스 기반 ID (1부터 시작)
+
     for (JsonElement el : dataArray) {
       JsonObject item = el.getAsJsonObject();
+      index++;  // 1부터 시작하는 ID
 
       if (item.has("위도") && item.has("경도")) {
         try {
@@ -451,9 +457,10 @@ public class MapPanel extends BasePanel {
           String detlCn = item.has("위치상세정보") ? item.get("위치상세정보").getAsString()
               : (item.has("detl_cn") ? item.get("detl_cn").getAsString() : "");
 
-          snowBoxInfoList.add(new SnowBoxInfo(latLng, sboxNum, mgcNm, detlCn));
+          snowBoxInfoList.add(new SnowBoxInfo(index, latLng, sboxNum, mgcNm, detlCn));
 
         } catch (Exception ignored) {
+          index--;  // 실패한 경우 ID 카운터 되돌리기
         }
       }
 
@@ -472,10 +479,13 @@ public class MapPanel extends BasePanel {
           String mgcNm = item.has("mgc_nm") ? item.get("mgc_nm").getAsString() : "";
           String detlCn = item.has("detl_cn") ? item.get("detl_cn").getAsString() : "";
 
-          snowBoxInfoList.add(new SnowBoxInfo(latLng, sboxNum, mgcNm, detlCn));
+          snowBoxInfoList.add(new SnowBoxInfo(index, latLng, sboxNum, mgcNm, detlCn));
 
         } catch (Exception ignored) {
+          index--;  // 실패한 경우 ID 카운터 되돌리기
         }
+      } else {
+        index--;  // 파싱되지 않은 항목은 ID 카운터 되돌리기
       }
     }
 
@@ -594,50 +604,58 @@ public class MapPanel extends BasePanel {
   private void showSnowBoxInfoWindow(SnowBoxInfo info) {
     Window parentWindow = SwingUtilities.getWindowAncestor(this);
     JDialog dialog = new JDialog((Frame) parentWindow, "제설함 정보", true);
-    dialog.setSize(350, 280);
+    dialog.setSize(500, 700);
     dialog.setLocationRelativeTo(parentWindow);
     dialog.setLayout(new BorderLayout());
 
-    JPanel content = new JPanel();
-    content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-    content.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+    // 상단: 제설함 정보
+    JPanel infoPanel = new JPanel();
+    infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
+    infoPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 10, 20));
 
     // 제설함 번호 (없으면 "정보 없음" 표시)
     String sboxNum = (info.sboxNum != null && !info.sboxNum.trim().isEmpty()) 
         ? info.sboxNum : "정보 없음";
     JLabel num = new JLabel("<html><b>제설함 번호:</b> " + sboxNum + "</html>");
     num.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
-    content.add(num);
-    content.add(Box.createVerticalStrut(10));
+    infoPanel.add(num);
+    infoPanel.add(Box.createVerticalStrut(10));
 
     // 관리기관 (없으면 "정보 없음" 표시)
     String mgcNm = (info.mgcNm != null && !info.mgcNm.trim().isEmpty()) 
         ? info.mgcNm : "정보 없음";
     JLabel mgc = new JLabel("<html><b>관리기관:</b> " + mgcNm + "</html>");
-    content.add(mgc);
-    content.add(Box.createVerticalStrut(10));
+    infoPanel.add(mgc);
+    infoPanel.add(Box.createVerticalStrut(10));
 
     // 위치 (없으면 "정보 없음" 표시)
     String detlCn = (info.detlCn != null && !info.detlCn.trim().isEmpty()) 
         ? info.detlCn : "정보 없음";
     JLabel detl = new JLabel("<html><b>위치:</b> " + detlCn + "</html>");
-    content.add(detl);
-    content.add(Box.createVerticalStrut(10));
+    infoPanel.add(detl);
+    infoPanel.add(Box.createVerticalStrut(10));
 
     // 좌표 (항상 표시)
     JLabel coord = new JLabel(String.format("<html><b>좌표:</b> (%.6f, %.6f)</html>", info.location.y, info.location.x));
     coord.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 11));
-    content.add(coord);
-    content.add(Box.createVerticalStrut(15));
+    infoPanel.add(coord);
 
-    dialog.add(content, BorderLayout.CENTER);
+    // 중앙: 댓글 패널 (제설함 ID를 post_id로 사용, post_type은 "snowbox")
+    components.community.CommentPanel commentPanel = new components.community.CommentPanel(
+        info.id, 
+        "snowbox", 
+        null  // 제설함은 작성자가 없으므로 null
+    );
 
+    // 하단: 닫기 버튼
     JButton close = new JButton("닫기");
     close.addActionListener(e -> dialog.dispose());
+    JPanel buttonPanel = new JPanel();
+    buttonPanel.add(close);
 
-    JPanel panel = new JPanel();
-    panel.add(close);
-    dialog.add(panel, BorderLayout.SOUTH);
+    dialog.add(infoPanel, BorderLayout.NORTH);
+    dialog.add(commentPanel, BorderLayout.CENTER);
+    dialog.add(buttonPanel, BorderLayout.SOUTH);
 
     dialog.setVisible(true);
   }

@@ -180,6 +180,16 @@ public class CommentPanel extends JPanel {
             infoPanel.add(authorLabel);
         }
         
+        // 제설함 댓글인 경우 별점 표시
+        if ("snowbox".equals(postType) && comment.getRating() != null && comment.getRating() > 0) {
+            String ratingStr = formatRating(comment.getRating());
+            JLabel ratingLabel = new JLabel(ratingStr);
+            ratingLabel.setFont(core.BasePanel.FONT_BODY);
+            ratingLabel.setForeground(new Color(0xFF8C00)); // 주황색
+            infoPanel.add(Box.createHorizontalStrut(10));
+            infoPanel.add(ratingLabel);
+        }
+        
         String dateStr = comment.getCreatedAt();
         if (dateStr != null && dateStr.length() > 16) {
             dateStr = dateStr.substring(0, 16);
@@ -259,12 +269,24 @@ public class CommentPanel extends JPanel {
             return;
         }
         
+        // 제설함(post_type='snowbox')인 경우 별점 입력 받기
+        Integer rating = null;
+        if ("snowbox".equals(postType)) {
+            rating = showRatingDialog();
+            if (rating == null) {
+                return; // 사용자가 취소한 경우
+            }
+        }
+        
         try {
             JSONObject data = new JSONObject();
             data.put("post_id", postId);
             data.put("post_type", postType);
             data.put("user_id", userId);
             data.put("content", content);
+            if (rating != null) {
+                data.put("rating", rating);
+            }
             
             JSONObject response = ApiClient.post("/comments", data);
             
@@ -281,6 +303,80 @@ public class CommentPanel extends JPanel {
                 "서버 연결에 실패했습니다: " + e.getMessage(),
                 "오류", JOptionPane.ERROR_MESSAGE);
         }
+    }
+    
+    /**
+     * 별점 입력 다이얼로그
+     */
+    private Integer showRatingDialog() {
+        Window parentWindow = SwingUtilities.getWindowAncestor(this);
+        JDialog dialog;
+        if (parentWindow instanceof java.awt.Frame) {
+            dialog = new JDialog((java.awt.Frame) parentWindow, "별점 선택", true);
+        } else if (parentWindow instanceof JDialog) {
+            dialog = new JDialog((JDialog) parentWindow, "별점 선택", true);
+        } else {
+            dialog = new JDialog((java.awt.Frame) null, "별점 선택", true);
+        }
+        dialog.setSize(300, 200);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout());
+        
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        
+        JLabel label = new JLabel("별점을 선택해주세요:");
+        label.setFont(core.BasePanel.FONT_BODY);
+        panel.add(label);
+        panel.add(Box.createVerticalStrut(10));
+        
+        JComboBox<Integer> ratingComboBox = new JComboBox<>();
+        ratingComboBox.setFont(core.BasePanel.FONT_BODY);
+        for (int i = 1; i <= 5; i++) {
+            ratingComboBox.addItem(i);
+        }
+        panel.add(ratingComboBox);
+        panel.add(Box.createVerticalStrut(20));
+        
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        JButton okButton = new JButton("확인");
+        JButton cancelButton = new JButton("취소");
+        
+        final Integer[] result = new Integer[1];
+        result[0] = null;
+        
+        okButton.addActionListener(e -> {
+            result[0] = (Integer) ratingComboBox.getSelectedItem();
+            dialog.dispose();
+        });
+        cancelButton.addActionListener(e -> {
+            result[0] = null;
+            dialog.dispose();
+        });
+        
+        buttonPanel.add(okButton);
+        buttonPanel.add(cancelButton);
+        panel.add(buttonPanel);
+        
+        dialog.add(panel, BorderLayout.CENTER);
+        dialog.setVisible(true);
+        
+        return result[0];
+    }
+    
+    /**
+     * 별점을 별 문자로 변환
+     */
+    private String formatRating(int rating) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < rating; i++) {
+            sb.append("★");
+        }
+        for (int i = rating; i < 5; i++) {
+            sb.append("☆");
+        }
+        return sb.toString() + " (" + rating + "/5)";
     }
     
     /**
