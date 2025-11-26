@@ -4,14 +4,16 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+
 import core.Navigator;
+import core.Session;
 import utils.IconFactory;
 
 /**
  * 상단 헤더 네비게이션 (모든 페이지에서 고정으로 사용)
  * - 로고
  * - 탭 버튼 (관련뉴스, 대응안내, 제설함 지도, 커뮤니티)
- * - 인증 버튼 (로그인, 회원가입)
+ * - 인증/사용자 영역 (로그인, 회원가입, 사용자명, 로그아웃)
  */
 public class HeaderNav extends JPanel {
     // 어두운 회색 계열 색상 (기존 색상)
@@ -21,14 +23,28 @@ public class HeaderNav extends JPanel {
     private static final Color COLOR_NAV_ACTIVE = new Color(70, 80, 85);  // 활성화 시 색상
     private static final Font FONT_LOGO = new Font("맑은 고딕", Font.BOLD, 20);
     private static final Font FONT_NAV = new Font("맑은 고딕", Font.BOLD, 14);
-    
+
     private Navigator navigator;
-    
+    private JPanel authPanel;
+
+    // BaseFrame에서 생성되는 단일 헤더 인스턴스를 다른 곳에서 갱신할 수 있도록 참조 보관
+    private static HeaderNav instance;
+
     public HeaderNav() {
         this.navigator = Navigator.getInstance();
+        instance = this;
         initializePanel();
     }
-    
+
+    /**
+     * 세션 상태가 바뀌었을 때(로그인/로그아웃) 헤더 우측 영역을 갱신하기 위한 헬퍼
+     */
+    public static void refreshAuthState() {
+        if (instance != null) {
+            instance.updateAuthPanel();
+        }
+    }
+
     private void initializePanel() {
         setLayout(new BorderLayout());
         setBackground(COLOR_NAV_BACKGROUND);
@@ -37,24 +53,27 @@ public class HeaderNav extends JPanel {
         setMinimumSize(new Dimension(0, 60));  // 최소 높이 보장
         setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));  // 최대 높이 제한
         setVisible(true);  // 명시적으로 보이도록 설정
-        
+
         // 하단 경계선 추가 (더 명확하게 보이도록)
         setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(30, 42, 35)),
             BorderFactory.createEmptyBorder(0, 0, 0, 0)
         ));
-        
+
         // 로고 (WEST)
         JLabel logoLabel = createLogoLabel();
         add(logoLabel, BorderLayout.WEST);
-        
+
         // 중앙 탭 버튼 패널 (CENTER)
         JPanel tabButtonPanel = createTabButtonPanel();
         add(tabButtonPanel, BorderLayout.CENTER);
-        
-        // 오른쪽 인증 패널 (EAST)
-        JPanel authPanel = createAuthPanel();
+
+        // 오른쪽 인증/사용자 패널 (EAST)
+        authPanel = createAuthPanel();
         add(authPanel, BorderLayout.EAST);
+
+        // 초기 진입 시 세션 상태(로그아웃 상태)에 맞게 버튼 구성
+        updateAuthPanel();
     }
     
     @Override
@@ -113,12 +132,13 @@ public class HeaderNav extends JPanel {
         styleNavButton(btnGuide);
         styleNavButton(btnMap);
         styleNavButton(btnCommunity);
-        
+
         // 클릭 이벤트
-        btnNews.addActionListener(e -> navigator.goTo("News"));
+        // 대응안내는 비로그인도 접근 가능, 그 외 탭은 로그인 필요
+        btnNews.addActionListener(e -> handleProtectedNavigation("News"));
         btnGuide.addActionListener(e -> navigator.goTo("Guide"));
-        btnMap.addActionListener(e -> navigator.goTo("Map"));
-        btnCommunity.addActionListener(e -> navigator.goTo("Community"));
+        btnMap.addActionListener(e -> handleProtectedNavigation("Map"));
+        btnCommunity.addActionListener(e -> handleProtectedNavigation("Community"));
         
         tabButtonPanel.add(btnNews);
         tabButtonPanel.add(btnGuide);
@@ -127,28 +147,85 @@ public class HeaderNav extends JPanel {
         
         return tabButtonPanel;
     }
-    
+
+    /**
+     * 로그인 여부에 따라 우측 인증/사용자 영역을 갱신
+     */
     private JPanel createAuthPanel() {
-        JPanel authPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        authPanel.setOpaque(false);
-        authPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 20));
-        
-        CustomNavButton btnLogin = new CustomNavButton("로그인", COLOR_NAV_BACKGROUND);
-        CustomNavButton btnRegister = new CustomNavButton("회원가입", COLOR_NAV_BACKGROUND);
-        
-        styleNavButton(btnLogin);
-        styleNavButton(btnRegister);
-        
-        // 클릭 이벤트
-        btnLogin.addActionListener(e -> navigator.goTo("Login"));
-        btnRegister.addActionListener(e -> navigator.goTo("Register"));
-        
-        authPanel.add(btnLogin);
-        authPanel.add(btnRegister);
-        
-        return authPanel;
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        panel.setOpaque(false);
+        panel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 20));
+        return panel;
     }
-    
+
+    private void updateAuthPanel() {
+        if (authPanel == null) return;
+
+        authPanel.removeAll();
+
+        Session session = Session.getInstance();
+        if (!session.isLoggedIn()) {
+            // 비로그인 상태: 로그인/회원가입 버튼
+            CustomNavButton btnLogin = new CustomNavButton("로그인", COLOR_NAV_BACKGROUND);
+            CustomNavButton btnRegister = new CustomNavButton("회원가입", COLOR_NAV_BACKGROUND);
+
+            styleNavButton(btnLogin);
+            styleNavButton(btnRegister);
+
+            btnLogin.addActionListener(e -> navigator.goTo("Login"));
+            btnRegister.addActionListener(e -> navigator.goTo("Register"));
+
+            authPanel.add(btnLogin);
+            authPanel.add(btnRegister);
+        } else {
+            // 로그인 상태: 사용자명 + 로그아웃 버튼
+            String username = session.getUsername() != null ? session.getUsername() : "사용자";
+
+            JLabel userLabel = new JLabel(username + " 님");
+            userLabel.setFont(FONT_NAV);
+            userLabel.setForeground(Color.WHITE);
+            userLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
+
+            CustomNavButton btnLogout = new CustomNavButton("로그아웃", COLOR_NAV_BACKGROUND);
+            styleNavButton(btnLogout);
+            btnLogout.addActionListener(e -> {
+                session.logout();
+                JOptionPane.showMessageDialog(
+                    this,
+                    "로그아웃 되었습니다.",
+                    "알림",
+                    JOptionPane.INFORMATION_MESSAGE
+                );
+                navigator.goTo("Home");
+                updateAuthPanel();
+            });
+
+            authPanel.add(userLabel);
+            authPanel.add(btnLogout);
+        }
+
+        authPanel.revalidate();
+        authPanel.repaint();
+    }
+
+    /**
+     * 로그인 필요 탭 접근 시 세션 확인
+     */
+    private void handleProtectedNavigation(String screenName) {
+        Session session = Session.getInstance();
+        if (!session.isLoggedIn()) {
+            JOptionPane.showMessageDialog(
+                this,
+                "로그인이 필요한 서비스입니다.",
+                "알림",
+                JOptionPane.INFORMATION_MESSAGE
+            );
+            navigator.goTo("Login");
+            return;
+        }
+        navigator.goTo(screenName);
+    }
+
     private void styleNavButton(CustomNavButton button) {
         button.setFont(FONT_NAV);
         button.setForeground(Color.WHITE);

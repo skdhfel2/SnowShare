@@ -3,6 +3,7 @@ package components.auth;
 import core.BasePanel;
 import core.Session;
 import core.Navigator;
+import components.common.HeaderNav;
 import utils.ApiClient;
 import org.json.JSONObject;
 import javax.swing.*;
@@ -100,6 +101,9 @@ public class LoginPanel extends BasePanel {
                             );
                             
                             showInfo("로그인 성공!");
+
+                            // 헤더 상태 갱신 (로그인/로그아웃 영역 업데이트)
+                            HeaderNav.refreshAuthState();
                             
                             // 홈 화면으로 이동
                             Navigator.getInstance().goTo("Home");
