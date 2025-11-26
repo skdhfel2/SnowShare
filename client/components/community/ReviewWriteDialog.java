@@ -4,17 +4,21 @@ import models.Review;
 import utils.ApiClient;
 import core.Session;
 import org.json.JSONObject;
+import utils.SnowBoxStore;
+import utils.SnowBoxStore.SnowBoxInfo;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.IOException;
 
 /**
  * 후기 작성/수정 다이얼로그
  */
 public class ReviewWriteDialog extends JDialog {
-    private JComboBox<Integer> saltboxComboBox;
+    // 제설함 선택 관련 컴포넌트
+    private JLabel selectedSnowBoxLabel;
+    private JButton selectSnowBoxButton;
+    private Integer selectedSaltboxId; // 실제로 서버에 전송할 제설함 ID
+
     private JComboBox<Integer> ratingComboBox;
     private JTextArea contentArea;
     private JButton saveButton;
@@ -27,6 +31,33 @@ public class ReviewWriteDialog extends JDialog {
         this.review = review;
         initializeDialog();
     }
+
+    /**
+     * 제설함 선택 다이얼로그 열기
+     */
+    private void openSnowBoxSelectDialog() {
+        SnowBoxSelectDialog dialog = new SnowBoxSelectDialog((JFrame) getParent(), selectedSaltboxId);
+        dialog.setVisible(true);
+
+        SnowBoxInfo selected = dialog.getSelectedSnowBox();
+        if (selected != null) {
+            selectedSaltboxId = selected.getId();
+            selectedSnowBoxLabel.setText(formatSnowBoxText(selected));
+        }
+    }
+
+    /**
+     * 제설함 정보를 사람이 읽기 좋은 문자열로 변환
+     */
+    private String formatSnowBoxText(SnowBoxInfo info) {
+        String num = info.getSboxNum() == null || info.getSboxNum().isEmpty()
+                ? "(번호 없음)" : info.getSboxNum();
+        String loc = info.getDetlCn() == null || info.getDetlCn().isEmpty()
+                ? "(위치 정보 없음)" : info.getDetlCn();
+        String org = info.getMgcNm() == null || info.getMgcNm().isEmpty()
+                ? "" : " - " + info.getMgcNm();
+        return num + " - " + loc + org;
+    }
     
     private void initializeDialog() {
         setSize(600, 500);
@@ -37,19 +68,24 @@ public class ReviewWriteDialog extends JDialog {
         JPanel inputPanel = new JPanel(new BorderLayout(10, 10));
         inputPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         
-        // 제설함 선택
-        JLabel saltboxLabel = new JLabel("제설함 ID:");
+        // 제설함 선택 영역
+        JLabel saltboxLabel = new JLabel("제설함 위치:");
         saltboxLabel.setFont(core.BasePanel.FONT_BODY);
-        saltboxComboBox = new JComboBox<>();
-        saltboxComboBox.setFont(core.BasePanel.FONT_BODY);
-        // 임시로 1~10까지 제설함 ID 추가 (실제로는 API에서 가져와야 함)
-        for (int i = 1; i <= 10; i++) {
-            saltboxComboBox.addItem(i);
-        }
-        
+
+        selectedSnowBoxLabel = new JLabel("선택된 제설함이 없습니다.");
+        selectedSnowBoxLabel.setFont(core.BasePanel.FONT_BODY);
+
+        selectSnowBoxButton = new JButton("제설함 찾기");
+        selectSnowBoxButton.setFont(core.BasePanel.FONT_BODY);
+        selectSnowBoxButton.addActionListener(e -> openSnowBoxSelectDialog());
+
+        JPanel saltboxInfoPanel = new JPanel(new BorderLayout(5, 5));
+        saltboxInfoPanel.add(selectedSnowBoxLabel, BorderLayout.CENTER);
+        saltboxInfoPanel.add(selectSnowBoxButton, BorderLayout.EAST);
+
         JPanel saltboxPanel = new JPanel(new BorderLayout(5, 5));
         saltboxPanel.add(saltboxLabel, BorderLayout.NORTH);
-        saltboxPanel.add(saltboxComboBox, BorderLayout.CENTER);
+        saltboxPanel.add(saltboxInfoPanel, BorderLayout.CENTER);
         
         // 별점 선택
         JLabel ratingLabel = new JLabel("별점:");
@@ -89,10 +125,17 @@ public class ReviewWriteDialog extends JDialog {
         
         // 수정 모드인 경우 기존 데이터 로드
         if (review != null) {
-            saltboxComboBox.setSelectedItem(review.getSaltboxId());
+            selectedSaltboxId = review.getSaltboxId();
+            SnowBoxInfo info = SnowBoxStore.getById(selectedSaltboxId);
+            if (info != null) {
+                selectedSnowBoxLabel.setText(formatSnowBoxText(info));
+            } else {
+                selectedSnowBoxLabel.setText("제설함 ID: " + selectedSaltboxId);
+            }
+            // 수정 시 제설함 변경 불가
+            selectSnowBoxButton.setEnabled(false);
             ratingComboBox.setSelectedItem(review.getRating());
             contentArea.setText(review.getContent());
-            saltboxComboBox.setEnabled(false); // 수정 시 제설함 변경 불가
         }
         
         // 하단: 버튼 패널
@@ -111,7 +154,11 @@ public class ReviewWriteDialog extends JDialog {
     }
     
     private void saveReview() {
-        Integer saltboxId = (Integer) saltboxComboBox.getSelectedItem();
+        if (selectedSaltboxId == null || selectedSaltboxId <= 0) {
+            JOptionPane.showMessageDialog(this, "제설함을 선택해주세요.", "알림", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        Integer saltboxId = selectedSaltboxId;
         Integer rating = (Integer) ratingComboBox.getSelectedItem();
         String content = contentArea.getText().trim();
         

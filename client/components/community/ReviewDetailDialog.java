@@ -4,6 +4,8 @@ import models.Review;
 import utils.ApiClient;
 import core.Session;
 import org.json.JSONObject;
+import utils.SnowBoxStore;
+import utils.SnowBoxStore.SnowBoxInfo;
 import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
@@ -53,8 +55,9 @@ public class ReviewDetailDialog extends JDialog {
         
         // 제설함 ID 및 별점
         JPanel metaPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        saltboxLabel = new JLabel("제설함 ID: " + review.getSaltboxId());
+        saltboxLabel = new JLabel();
         saltboxLabel.setFont(core.BasePanel.FONT_BODY);
+        updateSaltboxLabel();
         
         String ratingStr = repeatString("★", review.getRating()) + repeatString("☆", 5 - review.getRating());
         ratingLabel = new JLabel("별점: " + ratingStr + " (" + review.getRating() + "/5)");
@@ -128,7 +131,7 @@ public class ReviewDetailDialog extends JDialog {
                     JSONObject data = response.optJSONObject("data");
                     if (data != null) {
                         review = new Review(data);
-                        saltboxLabel.setText("제설함 ID: " + review.getSaltboxId());
+                        updateSaltboxLabel();
                         String ratingStr = repeatString("★", review.getRating()) + repeatString("☆", 5 - review.getRating());
                         ratingLabel.setText("별점: " + ratingStr + " (" + review.getRating() + "/5)");
                         contentArea.setText(review.getContent());
@@ -181,6 +184,29 @@ public class ReviewDetailDialog extends JDialog {
     
     public boolean isRefreshNeeded() {
         return refreshNeeded;
+    }
+
+    /**
+     * 제설함 정보를 사람이 읽기 좋은 텍스트로 갱신
+     */
+    private void updateSaltboxLabel() {
+        int saltboxId = review.getSaltboxId();
+        SnowBoxInfo info = SnowBoxStore.getById(saltboxId);
+        if (info != null) {
+            String text = String.format(
+                "제설함: %s - %s (%s)",
+                safe(info.getSboxNum()),
+                safe(info.getDetlCn()),
+                safe(info.getMgcNm())
+            );
+            saltboxLabel.setText(text);
+        } else {
+            saltboxLabel.setText("제설함 ID: " + saltboxId);
+        }
+    }
+
+    private String safe(String s) {
+        return (s == null || s.isEmpty()) ? "-" : s;
     }
 }
 

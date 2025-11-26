@@ -11,7 +11,7 @@ import java.awt.*;
 public class CommunityPanel extends BasePanel {
     private JTabbedPane tabbedPane;
     private FreeBoardPanel freeBoardPanel;
-    // TODO: ReviewPanel 추가 예정
+    private ReviewPanel reviewPanel;
     
     public CommunityPanel() {
         initializePanel();
@@ -28,9 +28,9 @@ public class CommunityPanel extends BasePanel {
         freeBoardPanel = new FreeBoardPanel();
         tabbedPane.addTab("자유게시판", freeBoardPanel);
         
-        // TODO: 후기게시판 탭 추가
-        // ReviewPanel reviewPanel = new ReviewPanel();
-        // tabbedPane.addTab("후기게시판", reviewPanel);
+        // 후기게시판 탭
+        reviewPanel = new ReviewPanel();
+        tabbedPane.addTab("후기게시판", reviewPanel);
         
         add(tabbedPane, BorderLayout.CENTER);
     }
