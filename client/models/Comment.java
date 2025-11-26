@@ -1,6 +1,7 @@
 package models;
 
 import org.json.JSONObject;
+import org.json.JSONArray;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,6 +35,17 @@ public class Comment {
             this.parentCommentId = json.optInt("parent_comment_id", 0);
         }
         this.createdAt = json.optString("created_at", "");
+
+        // 대댓글(replies) 파싱 (있을 수도 있고 없을 수도 있음)
+        JSONArray repliesArray = json.optJSONArray("replies");
+        if (repliesArray != null) {
+            for (int i = 0; i < repliesArray.length(); i++) {
+                JSONObject childJson = repliesArray.optJSONObject(i);
+                if (childJson != null) {
+                    this.replies.add(new Comment(childJson));
+                }
+            }
+        }
     }
     
     // Getters and Setters

@@ -34,7 +34,7 @@ async function initDatabase() {
 
     const connection = await db.getConnection();
 
-    // 기존 users 테이블에서 email 컬럼 제거 (마이그레이션)
+    // 기존 users 테이블에서 email 컬럼 제거 (마이그레이션 예시)
     try {
       const [columns] = await connection.query(
         `SELECT COLUMN_NAME 
@@ -58,6 +58,33 @@ async function initDatabase() {
     } catch (migrationError) {
       // 마이그레이션 실패해도 계속 진행 (테이블이 없을 수도 있음)
       logger.info('Migration check completed (table may not exist yet)');
+    }
+
+    // posts, reviews 테이블에 view_count 컬럼이 없으면 추가
+    try {
+      const ensureViewCountColumn = async (tableName) => {
+        const [columns] = await connection.query(
+          `SELECT COLUMN_NAME 
+           FROM information_schema.COLUMNS 
+           WHERE TABLE_SCHEMA = DATABASE() 
+             AND TABLE_NAME = ? 
+             AND COLUMN_NAME = 'view_count'`,
+          [tableName],
+        );
+        if (columns.length === 0) {
+          logger.info(`Adding view_count column to ${tableName} table...`);
+          await connection.query(
+            `ALTER TABLE ${tableName} 
+             ADD COLUMN view_count INT NOT NULL DEFAULT 0 COMMENT '조회수'`,
+          );
+          logger.info(`view_count column added to ${tableName} table`);
+        }
+      };
+
+      await ensureViewCountColumn('posts');
+      await ensureViewCountColumn('reviews');
+    } catch (viewColError) {
+      logger.error('Error ensuring view_count columns:', viewColError);
     }
 
     for (const [index, statement] of statements.entries()) {

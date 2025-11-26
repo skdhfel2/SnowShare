@@ -21,15 +21,22 @@ import java.util.List;
 public class CommentPanel extends JPanel {
     private int postId;
     private String postType;
+    private String postAuthorId;
     private JPanel commentListPanel;
     private JTextArea commentInputArea;
     private JButton submitButton;
     private JButton refreshButton;
     private List<Comment> comments;
     
-    public CommentPanel(int postId, String postType) {
+    /**
+     * @param postId       댓글이 달리는 게시글/후기 ID
+     * @param postType     "post" 또는 "review"
+     * @param postAuthorId 게시글/후기 작성자 ID (본인 댓글에 '글쓴이' 표시용)
+     */
+    public CommentPanel(int postId, String postType, String postAuthorId) {
         this.postId = postId;
         this.postType = postType;
+        this.postAuthorId = postAuthorId;
         this.comments = new ArrayList<>();
         initializePanel();
         loadComments();
@@ -133,14 +140,45 @@ public class CommentPanel extends JPanel {
      */
     private JPanel createCommentItem(Comment comment, int depth) {
         JPanel panel = new JPanel(new BorderLayout(5, 5));
-        panel.setBorder(new EmptyBorder(5, depth * 20, 5, 5));
+        // depth가 깊어질수록 왼쪽 패딩을 늘려 대댓글 구조를 시각적으로 구분
+        int leftPadding = 5 + depth * 20;
+        panel.setBorder(new EmptyBorder(5, leftPadding, 5, 5));
         panel.setBackground(Color.WHITE);
         
         // 댓글 정보 (작성자, 날짜)
-        JPanel infoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JLabel authorLabel = new JLabel(comment.getUsername().isEmpty() ? comment.getUserId() : comment.getUsername());
-        authorLabel.setFont(core.BasePanel.FONT_BODY);
-        authorLabel.setFont(authorLabel.getFont().deriveFont(Font.BOLD));
+        JPanel infoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        String baseAuthorName = comment.getUsername().isEmpty()
+                ? comment.getUserId()
+                : comment.getUsername();
+
+        // 게시글/후기 작성자가 단 댓글이면 닉네임 오른쪽에 [글쓴이] 표시
+        // depth가 1 이상인 대댓글은 별도의 아이콘(↳)을 닉네임 왼쪽에 표시해 시각적으로 구분
+        if (depth > 0) {
+            JLabel replyIcon = new JLabel("↳");
+            replyIcon.setFont(core.BasePanel.FONT_BODY.deriveFont(Font.BOLD));
+            replyIcon.setForeground(Color.GRAY);
+            infoPanel.add(replyIcon);
+        }
+
+        boolean isPostAuthor =
+                postAuthorId != null && !postAuthorId.isEmpty()
+                        && postAuthorId.equals(comment.getUserId());
+
+        if (isPostAuthor) {
+            String html = String.format(
+                    "<html>%s <span style='color:#FF6600;font-size:10px;'>[글쓴이]</span></html>",
+                    baseAuthorName
+            );
+            JLabel authorLabel = new JLabel(html);
+            authorLabel.setFont(core.BasePanel.FONT_BODY);
+            authorLabel.setFont(authorLabel.getFont().deriveFont(Font.BOLD));
+            infoPanel.add(authorLabel);
+        } else {
+            JLabel authorLabel = new JLabel(baseAuthorName);
+            authorLabel.setFont(core.BasePanel.FONT_BODY);
+            authorLabel.setFont(authorLabel.getFont().deriveFont(Font.BOLD));
+            infoPanel.add(authorLabel);
+        }
         
         String dateStr = comment.getCreatedAt();
         if (dateStr != null && dateStr.length() > 16) {
@@ -150,13 +188,13 @@ public class CommentPanel extends JPanel {
         dateLabel.setFont(core.BasePanel.FONT_BODY);
         dateLabel.setForeground(Color.GRAY);
         
-        infoPanel.add(authorLabel);
         infoPanel.add(Box.createHorizontalStrut(10));
         infoPanel.add(dateLabel);
         
-        // 댓글 내용
+        // 댓글 내용 (본문보다 한 단계 낮은 시각적 중요도로 표시)
         JTextArea contentArea = new JTextArea(comment.getContent());
-        contentArea.setFont(core.BasePanel.FONT_BODY);
+        float contentFontSize = core.BasePanel.FONT_BODY.getSize2D() - 1f;
+        contentArea.setFont(core.BasePanel.FONT_BODY.deriveFont(contentFontSize));
         contentArea.setEditable(false);
         contentArea.setLineWrap(true);
         contentArea.setWrapStyleWord(true);
@@ -164,23 +202,33 @@ public class CommentPanel extends JPanel {
         contentArea.setBorder(new EmptyBorder(5, 0, 5, 0));
         
         // 버튼 패널 (답글, 수정, 삭제)
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         String currentUserId = Session.getInstance().getUserId();
         
-        // 답글 버튼 (항상 표시)
-        JButton replyButton = new JButton("답글");
-        replyButton.setFont(core.BasePanel.FONT_BODY);
-        replyButton.addActionListener(e -> openReplyDialog(comment));
-        buttonPanel.add(replyButton);
+        // 답글 버튼 (최상위 댓글에서만 허용, 대댓글에는 비활성화)
+        if (depth == 0) {
+            JButton replyButton = new JButton("답글");
+            replyButton.setFont(core.BasePanel.FONT_BODY);
+            replyButton.addActionListener(e -> openReplyDialog(comment));
+            buttonPanel.add(replyButton);
+        }
         
         // 본인 댓글인 경우 수정/삭제 버튼 표시
         if (currentUserId != null && currentUserId.equals(comment.getUserId())) {
             JButton editButton = new JButton("수정");
             editButton.setFont(core.BasePanel.FONT_BODY);
+            // 수정 버튼: 강조색 (파랑 계열)
+            editButton.setBackground(new Color(0xE3F2FD));
+            editButton.setForeground(new Color(0x1565C0));
+            editButton.setFocusPainted(false);
             editButton.addActionListener(e -> editComment(comment));
             
             JButton deleteButton = new JButton("삭제");
             deleteButton.setFont(core.BasePanel.FONT_BODY);
+            // 삭제 버튼: 경고색 (빨강 계열)
+            deleteButton.setBackground(new Color(0xFFEBEE));
+            deleteButton.setForeground(new Color(0xC62828));
+            deleteButton.setFocusPainted(false);
             deleteButton.addActionListener(e -> deleteComment(comment));
             
             buttonPanel.add(editButton);
@@ -282,11 +330,11 @@ public class CommentPanel extends JPanel {
      * 댓글 수정
      */
     private void editComment(Comment comment) {
-        String newContent = JOptionPane.showInputDialog(
+        // 기존 댓글 내용을 기본값으로 갖는 입력 다이얼로그
+        String newContent = (String) JOptionPane.showInputDialog(
             this,
             "댓글을 수정하세요:",
-            comment.getContent(),
-            JOptionPane.PLAIN_MESSAGE
+            comment.getContent()
         );
         
         if (newContent != null && !newContent.trim().isEmpty()) {

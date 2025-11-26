@@ -27,7 +27,7 @@ public class ReviewPanel extends BasePanel {
     private JButton refreshButton;
     private List<Review> reviews;
 
-    private static final String[] COLUMN_NAMES = {"번호", "제설함", "별점", "작성자", "작성일"};
+    private static final String[] COLUMN_NAMES = {"번호", "제설함", "별점", "댓글", "조회수", "작성자", "작성일"};
 
     public ReviewPanel() {
         reviews = new ArrayList<>();
@@ -66,9 +66,11 @@ public class ReviewPanel extends BasePanel {
         // 컬럼 너비 설정
         reviewTable.getColumnModel().getColumn(0).setPreferredWidth(60);   // 번호
         reviewTable.getColumnModel().getColumn(1).setPreferredWidth(260);  // 제설함
-        reviewTable.getColumnModel().getColumn(2).setPreferredWidth(80);   // 별점
-        reviewTable.getColumnModel().getColumn(3).setPreferredWidth(100);  // 작성자
-        reviewTable.getColumnModel().getColumn(4).setPreferredWidth(150);  // 작성일
+        reviewTable.getColumnModel().getColumn(2).setPreferredWidth(100);  // 별점
+        reviewTable.getColumnModel().getColumn(3).setPreferredWidth(70);   // 댓글
+        reviewTable.getColumnModel().getColumn(4).setPreferredWidth(70);   // 조회수
+        reviewTable.getColumnModel().getColumn(5).setPreferredWidth(80);   // 작성자
+        reviewTable.getColumnModel().getColumn(6).setPreferredWidth(150);  // 작성일
 
         // 더블클릭 시 상세보기
         reviewTable.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -121,6 +123,8 @@ public class ReviewPanel extends BasePanel {
                                     review.getId(),
                                     saltboxText,
                                     ratingText,
+                                    review.getCommentCount(),
+                                    review.getViewCount(),
                                     author,
                                     dateStr
                             });
@@ -151,12 +155,28 @@ public class ReviewPanel extends BasePanel {
      * 상세보기 다이얼로그 열기
      */
     private void openDetailDialog(Review review) {
-        ReviewDetailDialog dialog = new ReviewDetailDialog(
-                (JFrame) SwingUtilities.getWindowAncestor(this), review);
-        dialog.setVisible(true);
-        if (dialog.isRefreshNeeded()) {
-            loadReviews();
+        // 상세보기 전에 최신 데이터 및 조회수 반영을 위해 서버에서 다시 조회
+        Review latestReview = review;
+        try {
+            JSONObject response = ApiClient.get("/reviews/" + review.getId());
+            if (response.optBoolean("success", false)) {
+                JSONObject data = response.optJSONObject("data");
+                if (data != null) {
+                    latestReview = new Review(data);
+                }
+            }
+        } catch (IOException e) {
+            // 실패해도 기존 review 객체로 상세보기는 계속 진행
         }
+
+        ReviewDetailDialog dialog = new ReviewDetailDialog(
+                (JFrame) SwingUtilities.getWindowAncestor(this),
+                latestReview
+        );
+        dialog.setVisible(true);
+
+        // 상세 보기 시 조회수가 증가하므로, 다이얼로그 종료 후 목록을 새로고침
+        loadReviews();
     }
 
     /**

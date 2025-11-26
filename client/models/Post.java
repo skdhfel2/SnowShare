@@ -13,6 +13,8 @@ public class Post {
     private String username;
     private String createdAt;
     private String updatedAt;
+    private int commentCount;
+    private int viewCount;
     
     public Post() {}
     
@@ -24,6 +26,8 @@ public class Post {
         this.username = json.optString("username", "");
         this.createdAt = json.optString("created_at", "");
         this.updatedAt = json.optString("updated_at", "");
+        this.commentCount = json.optInt("comment_count", 0);
+        this.viewCount = json.optInt("view_count", 0);
     }
     
     // Getters and Setters
@@ -47,6 +51,12 @@ public class Post {
     
     public String getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(String updatedAt) { this.updatedAt = updatedAt; }
+
+    public int getCommentCount() { return commentCount; }
+    public void setCommentCount(int commentCount) { this.commentCount = commentCount; }
+
+    public int getViewCount() { return viewCount; }
+    public void setViewCount(int viewCount) { this.viewCount = viewCount; }
     
     public JSONObject toJSON() {
         JSONObject json = new JSONObject();

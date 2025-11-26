@@ -11,9 +11,15 @@ class ReviewModel {
   static async getAllReviews() {
     try {
       const [rows] = await db.query(
-        `SELECT * 
-         FROM reviews 
-         ORDER BY created_at DESC`,
+        `SELECT r.*,
+                (
+                  SELECT COUNT(*) 
+                  FROM comments c 
+                  WHERE c.post_id = r.id 
+                    AND c.post_type = 'review'
+                ) AS comment_count
+         FROM reviews r
+         ORDER BY r.created_at DESC`,
       );
       return rows;
     } catch (error) {
@@ -28,9 +34,15 @@ class ReviewModel {
   static async getReviewById(id) {
     try {
       const [rows] = await db.query(
-        `SELECT * 
-         FROM reviews 
-         WHERE id = ?`,
+        `SELECT r.*,
+                (
+                  SELECT COUNT(*) 
+                  FROM comments c 
+                  WHERE c.post_id = r.id 
+                    AND c.post_type = 'review'
+                ) AS comment_count
+         FROM reviews r
+         WHERE r.id = ?`,
         [id],
       );
       return rows[0] || null;
@@ -125,6 +137,23 @@ class ReviewModel {
       return rows.length > 0;
     } catch (error) {
       logger.error('Error checking author:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 조회수 1 증가
+   */
+  static async incrementViewCount(id) {
+    try {
+      await db.query(
+        `UPDATE reviews 
+         SET view_count = view_count + 1 
+         WHERE id = ?`,
+        [id],
+      );
+    } catch (error) {
+      logger.error('Error incrementing review view count:', error);
       throw error;
     }
   }

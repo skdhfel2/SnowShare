@@ -13,6 +13,8 @@ public class Review {
     private int rating;
     private String content;
     private String createdAt;
+    private int commentCount;
+    private int viewCount;
     
     public Review() {}
     
@@ -24,6 +26,8 @@ public class Review {
         this.rating = json.optInt("rating", 0);
         this.content = json.optString("content", "");
         this.createdAt = json.optString("created_at", "");
+        this.commentCount = json.optInt("comment_count", 0);
+        this.viewCount = json.optInt("view_count", 0);
     }
     
     // Getters and Setters
@@ -47,6 +51,12 @@ public class Review {
     
     public String getCreatedAt() { return createdAt; }
     public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+
+    public int getCommentCount() { return commentCount; }
+    public void setCommentCount(int commentCount) { this.commentCount = commentCount; }
+
+    public int getViewCount() { return viewCount; }
+    public void setViewCount(int viewCount) { this.viewCount = viewCount; }
     
     public JSONObject toJSON() {
         JSONObject json = new JSONObject();

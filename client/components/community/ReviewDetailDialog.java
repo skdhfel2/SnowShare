@@ -77,13 +77,14 @@ public class ReviewDetailDialog extends JDialog {
         authorPanel.add(Box.createHorizontalStrut(20));
         authorPanel.add(dateLabel);
         
-        // 내용
+        // 내용 (주요 콘텐츠가 눈에 잘 띄도록 하되 주변 스타일과 통일)
         contentArea = new JTextArea(review.getContent());
-        contentArea.setFont(core.BasePanel.FONT_BODY);
+        contentArea.setFont(core.BasePanel.FONT_BODY.deriveFont(Font.PLAIN, 14f));
         contentArea.setEditable(false);
         contentArea.setLineWrap(true);
         contentArea.setWrapStyleWord(true);
-        contentArea.setBackground(getBackground());
+        contentArea.setBackground(Color.WHITE);
+        contentArea.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
         JScrollPane contentScroll = new JScrollPane(contentArea);
         contentScroll.setBorder(BorderFactory.createTitledBorder("후기 내용"));
         
@@ -91,8 +92,8 @@ public class ReviewDetailDialog extends JDialog {
         infoPanel.add(authorPanel, BorderLayout.CENTER);
         infoPanel.add(contentScroll, BorderLayout.SOUTH);
         
-        // 중앙: 댓글 패널
-        commentPanel = new CommentPanel(review.getId(), "review");
+        // 중앙: 댓글 패널 (후기 작성자 정보를 넘겨서 '글쓴이' 뱃지 표시)
+        commentPanel = new CommentPanel(review.getId(), "review", review.getUserId());
         
         // 하단: 버튼 패널
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -105,6 +106,17 @@ public class ReviewDetailDialog extends JDialog {
             
             editButton.addActionListener(e -> editReview());
             deleteButton.addActionListener(e -> deleteReview());
+
+            // 하단 수정/삭제 버튼도 댓글과 동일한 색상 스타일 적용
+            // 수정: 파란 계열
+            editButton.setBackground(new Color(0xE3F2FD));
+            editButton.setForeground(new Color(0x1565C0));
+            editButton.setFocusPainted(false);
+
+            // 삭제: 빨간 계열
+            deleteButton.setBackground(new Color(0xFFEBEE));
+            deleteButton.setForeground(new Color(0xC62828));
+            deleteButton.setFocusPainted(false);
             
             buttonPanel.add(editButton);
             buttonPanel.add(deleteButton);

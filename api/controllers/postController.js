@@ -41,6 +41,14 @@ const postController = {
         });
       }
 
+      // 조회수 증가 (에러가 나더라도 응답은 계속 진행)
+      try {
+        await PostModel.incrementViewCount(id);
+        post.view_count += 1;
+      } catch (incError) {
+        logger.error('Failed to increment post view count:', incError);
+      }
+
       res.json({
         success: true,
         data: post,

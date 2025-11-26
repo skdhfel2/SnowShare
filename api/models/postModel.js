@@ -11,9 +11,15 @@ class PostModel {
   static async getAllPosts() {
     try {
       const [rows] = await db.query(
-        `SELECT * 
-         FROM posts 
-         ORDER BY created_at DESC`,
+        `SELECT p.*,
+                (
+                  SELECT COUNT(*) 
+                  FROM comments c 
+                  WHERE c.post_id = p.id 
+                    AND c.post_type = 'post'
+                ) AS comment_count
+         FROM posts p
+         ORDER BY p.created_at DESC`,
       );
       return rows;
     } catch (error) {
@@ -28,9 +34,15 @@ class PostModel {
   static async getPostById(id) {
     try {
       const [rows] = await db.query(
-        `SELECT * 
-         FROM posts 
-         WHERE id = ?`,
+        `SELECT p.*,
+                (
+                  SELECT COUNT(*) 
+                  FROM comments c 
+                  WHERE c.post_id = p.id 
+                    AND c.post_type = 'post'
+                ) AS comment_count
+         FROM posts p
+         WHERE p.id = ?`,
         [id],
       );
       return rows[0] || null;
@@ -106,6 +118,23 @@ class PostModel {
       return rows.length > 0;
     } catch (error) {
       logger.error('Error checking author:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 조회수 1 증가
+   */
+  static async incrementViewCount(id) {
+    try {
+      await db.query(
+        `UPDATE posts 
+         SET view_count = view_count + 1 
+         WHERE id = ?`,
+        [id],
+      );
+    } catch (error) {
+      logger.error('Error incrementing post view count:', error);
       throw error;
     }
   }

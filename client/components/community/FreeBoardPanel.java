@@ -28,7 +28,7 @@ public class FreeBoardPanel extends BasePanel {
     private JButton refreshButton;
     private List<Post> posts;
     
-    private static final String[] COLUMN_NAMES = {"번호", "제목", "작성자", "작성일"};
+    private static final String[] COLUMN_NAMES = {"번호", "제목", "작성자", "댓글", "조회수", "작성일"};
     
     public FreeBoardPanel() {
         posts = new ArrayList<>();
@@ -65,10 +65,12 @@ public class FreeBoardPanel extends BasePanel {
         postTable.getTableHeader().setReorderingAllowed(false);
         
         // 컬럼 너비 설정
-        postTable.getColumnModel().getColumn(0).setPreferredWidth(60);  // 번호
-        postTable.getColumnModel().getColumn(1).setPreferredWidth(400);  // 제목
+        postTable.getColumnModel().getColumn(0).setPreferredWidth(60);   // 번호
+        postTable.getColumnModel().getColumn(1).setPreferredWidth(320);  // 제목
         postTable.getColumnModel().getColumn(2).setPreferredWidth(100);  // 작성자
-        postTable.getColumnModel().getColumn(3).setPreferredWidth(150); // 작성일
+        postTable.getColumnModel().getColumn(3).setPreferredWidth(70);   // 댓글
+        postTable.getColumnModel().getColumn(4).setPreferredWidth(70);   // 조회수
+        postTable.getColumnModel().getColumn(5).setPreferredWidth(150);  // 작성일
         
         // 더블클릭 시 상세보기
         postTable.addMouseListener(new MouseAdapter() {
@@ -121,6 +123,8 @@ public class FreeBoardPanel extends BasePanel {
                                 post.getId(),
                                 post.getTitle(),
                                 post.getUsername().isEmpty() ? post.getUserId() : post.getUsername(),
+                                post.getCommentCount(),
+                                post.getViewCount(),
                                 dateStr
                             });
                         }
@@ -149,11 +153,28 @@ public class FreeBoardPanel extends BasePanel {
      * 상세보기 다이얼로그 열기
      */
     private void openDetailDialog(Post post) {
-        PostDetailDialog dialog = new PostDetailDialog((JFrame) SwingUtilities.getWindowAncestor(this), post);
-        dialog.setVisible(true);
-        if (dialog.isRefreshNeeded()) {
-            loadPosts();
+        // 상세보기 전에 최신 데이터 및 조회수 반영을 위해 서버에서 다시 조회
+        Post latestPost = post;
+        try {
+            JSONObject response = ApiClient.get("/posts/" + post.getId());
+            if (response.optBoolean("success", false)) {
+                JSONObject data = response.optJSONObject("data");
+                if (data != null) {
+                    latestPost = new Post(data);
+                }
+            }
+        } catch (IOException e) {
+            // 실패해도 기존 post 객체로 상세보기는 계속 진행
         }
+
+        PostDetailDialog dialog = new PostDetailDialog(
+                (JFrame) SwingUtilities.getWindowAncestor(this),
+                latestPost
+        );
+        dialog.setVisible(true);
+
+        // 상세 보기 시 조회수가 증가하므로, 다이얼로그 종료 후 목록을 새로고침
+        loadPosts();
     }
 }
 

@@ -41,6 +41,14 @@ const reviewController = {
         });
       }
 
+      // 조회수 증가 (에러가 나더라도 응답은 계속 진행)
+      try {
+        await ReviewModel.incrementViewCount(id);
+        review.view_count += 1;
+      } catch (incError) {
+        logger.error('Failed to increment review view count:', incError);
+      }
+
       res.json({
         success: true,
         data: review,
