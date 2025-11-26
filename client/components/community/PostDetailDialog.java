@@ -66,17 +66,8 @@ public class PostDetailDialog extends JDialog {
         JScrollPane contentScroll = new JScrollPane(contentArea);
         contentScroll.setBorder(BorderFactory.createTitledBorder("내용"));
         
-        infoPanel.add(titleLabel, BorderLayout.NORTH);
-        infoPanel.add(metaPanel, BorderLayout.CENTER);
-        infoPanel.add(contentScroll, BorderLayout.SOUTH);
-        
-        // 중앙: 댓글 패널 (게시글 작성자 정보를 넘겨서 '글쓴이' 뱃지 표시)
-        commentPanel = new CommentPanel(post.getId(), "post", post.getUserId());
-        
-        // 하단: 버튼 패널
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        
-        // 본인 게시글인 경우 수정/삭제 버튼 표시
+        // 게시글 내용 아래에 수정/삭제 버튼 배치
+        JPanel contentButtonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         String currentUserId = Session.getInstance().getUserId();
         if (currentUserId != null && currentUserId.equals(post.getUserId())) {
             editButton = new JButton("수정");
@@ -85,7 +76,7 @@ public class PostDetailDialog extends JDialog {
             editButton.addActionListener(e -> editPost());
             deleteButton.addActionListener(e -> deletePost());
 
-            // 하단 수정/삭제 버튼도 댓글과 동일한 색상 스타일 적용
+            // 수정/삭제 버튼 색상 스타일 적용
             // 수정: 파란 계열
             editButton.setBackground(new Color(0xE3F2FD));
             editButton.setForeground(new Color(0x1565C0));
@@ -96,18 +87,33 @@ public class PostDetailDialog extends JDialog {
             deleteButton.setForeground(new Color(0xC62828));
             deleteButton.setFocusPainted(false);
             
-            buttonPanel.add(editButton);
-            buttonPanel.add(deleteButton);
-            buttonPanel.add(Box.createHorizontalStrut(10));
+            contentButtonPanel.add(editButton);
+            contentButtonPanel.add(deleteButton);
         }
         
+        // 내용 영역과 버튼을 묶는 패널
+        JPanel contentPanel = new JPanel(new BorderLayout());
+        contentPanel.add(contentScroll, BorderLayout.CENTER);
+        if (contentButtonPanel.getComponentCount() > 0) {
+            contentPanel.add(contentButtonPanel, BorderLayout.SOUTH);
+        }
+        
+        infoPanel.add(titleLabel, BorderLayout.NORTH);
+        infoPanel.add(metaPanel, BorderLayout.CENTER);
+        infoPanel.add(contentPanel, BorderLayout.SOUTH);
+        
+        // 중앙: 댓글 패널 (게시글 작성자 정보를 넘겨서 '글쓴이' 뱃지 표시)
+        commentPanel = new CommentPanel(post.getId(), "post", post.getUserId());
+        
+        // 하단: 닫기 버튼만
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         closeButton = new JButton("닫기");
         closeButton.addActionListener(e -> dispose());
-        buttonPanel.add(closeButton);
+        bottomPanel.add(closeButton);
         
         add(infoPanel, BorderLayout.NORTH);
         add(commentPanel, BorderLayout.CENTER);
-        add(buttonPanel, BorderLayout.SOUTH);
+        add(bottomPanel, BorderLayout.SOUTH);
     }
     
     private void editPost() {

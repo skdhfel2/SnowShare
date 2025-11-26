@@ -12,6 +12,7 @@ class ReviewModel {
     try {
       const [rows] = await db.query(
         `SELECT r.*,
+                u.username,
                 (
                   SELECT COUNT(*) 
                   FROM comments c 
@@ -19,6 +20,7 @@ class ReviewModel {
                     AND c.post_type = 'review'
                 ) AS comment_count
          FROM reviews r
+         LEFT JOIN users u ON r.user_id = u.id
          ORDER BY r.created_at DESC`,
       );
       return rows;
@@ -35,6 +37,7 @@ class ReviewModel {
     try {
       const [rows] = await db.query(
         `SELECT r.*,
+                u.username,
                 (
                   SELECT COUNT(*) 
                   FROM comments c 
@@ -42,6 +45,7 @@ class ReviewModel {
                     AND c.post_type = 'review'
                 ) AS comment_count
          FROM reviews r
+         LEFT JOIN users u ON r.user_id = u.id
          WHERE r.id = ?`,
         [id],
       );

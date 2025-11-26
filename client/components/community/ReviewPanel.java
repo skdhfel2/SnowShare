@@ -1,6 +1,7 @@
 package components.community;
 
 import core.BasePanel;
+import components.common.BoardHeaderPanel;
 import models.Review;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -10,7 +11,9 @@ import utils.SnowBoxStore.SnowBoxInfo;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
+import javax.swing.SwingConstants;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,9 +28,13 @@ public class ReviewPanel extends BasePanel {
     private DefaultTableModel tableModel;
     private JButton writeButton;
     private JButton refreshButton;
+    private JComboBox<String> sortComboBox;
+    private JLabel summaryLabel;
+    private JTextField searchField;
+    private JButton searchButton;
     private List<Review> reviews;
 
-    private static final String[] COLUMN_NAMES = {"번호", "제설함", "별점", "댓글", "조회수", "작성자", "작성일"};
+    private static final String[] COLUMN_NAMES = {"제설함", "별점", "댓글", "조회수", "작성자", "작성일"};
 
     public ReviewPanel() {
         reviews = new ArrayList<>();
@@ -38,17 +45,27 @@ public class ReviewPanel extends BasePanel {
     private void initializePanel() {
         setLayout(new BorderLayout());
 
-        // 상단: 버튼 패널
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        writeButton = new JButton("후기 작성");
-        refreshButton = new JButton("새로고침");
+        // 상단: 공통 헤더 컴포넌트 사용
+        BoardHeaderPanel headerPanel = new BoardHeaderPanel(
+                "후기게시판",
+                "제설함 이용 후기를 공유하는 공간입니다.",
+                "후기 작성",
+                new String[]{"정렬: 최신순", "정렬: 별점 높은순", "정렬: 조회수순", "정렬: 댓글 많은순"}
+        );
+        sortComboBox = headerPanel.getSortComboBox();
+        writeButton = headerPanel.getPrimaryButton();
+        refreshButton = headerPanel.getRefreshButton();
+        summaryLabel = headerPanel.getSummaryLabel();
+        searchField = headerPanel.getSearchField();
+        searchButton = headerPanel.getSearchButton();
 
         writeButton.addActionListener(e -> openWriteDialog());
         refreshButton.addActionListener(e -> loadReviews());
+        sortComboBox.addActionListener(e -> refreshTable());
+        searchButton.addActionListener(e -> refreshTable());
+        searchField.addActionListener(e -> refreshTable()); // Enter 키로도 검색 가능
 
-        buttonPanel.add(writeButton);
-        buttonPanel.add(refreshButton);
-        add(buttonPanel, BorderLayout.NORTH);
+        add(headerPanel, BorderLayout.NORTH);
 
         // 중앙: 후기 목록 테이블
         tableModel = new DefaultTableModel(COLUMN_NAMES, 0) {
@@ -63,14 +80,49 @@ public class ReviewPanel extends BasePanel {
         reviewTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         reviewTable.getTableHeader().setReorderingAllowed(false);
 
-        // 컬럼 너비 설정
-        reviewTable.getColumnModel().getColumn(0).setPreferredWidth(60);   // 번호
-        reviewTable.getColumnModel().getColumn(1).setPreferredWidth(260);  // 제설함
-        reviewTable.getColumnModel().getColumn(2).setPreferredWidth(100);  // 별점
-        reviewTable.getColumnModel().getColumn(3).setPreferredWidth(70);   // 댓글
-        reviewTable.getColumnModel().getColumn(4).setPreferredWidth(70);   // 조회수
-        reviewTable.getColumnModel().getColumn(5).setPreferredWidth(80);   // 작성자
-        reviewTable.getColumnModel().getColumn(6).setPreferredWidth(150);  // 작성일
+        // 모든 컬럼 가운데 정렬 (데이터 셀) - 배경색도 설정
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (isSelected) {
+                    c.setBackground(new Color(0xE3F2FD)); // 선택된 행: 연한 파란색
+                    c.setForeground(Color.BLACK);
+                } else {
+                    c.setBackground(Color.WHITE); // 일반 행: 흰색
+                    c.setForeground(Color.BLACK);
+                }
+                ((JLabel) c).setHorizontalAlignment(SwingConstants.CENTER);
+                return c;
+            }
+        };
+        for (int i = 0; i < reviewTable.getColumnModel().getColumnCount(); i++) {
+            reviewTable.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
+        }
+        
+        // 컬럼 헤더도 가운데 정렬 + 배경색 설정
+        DefaultTableCellRenderer headerRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                c.setBackground(new Color(0xF5F5F5)); // 헤더: 연한 회색 배경
+                c.setForeground(new Color(0x424242)); // 헤더: 진한 회색 텍스트
+                ((JLabel) c).setHorizontalAlignment(SwingConstants.CENTER);
+                ((JLabel) c).setFont(c.getFont().deriveFont(Font.BOLD)); // 헤더는 굵게
+                return c;
+            }
+        };
+        reviewTable.getTableHeader().setDefaultRenderer(headerRenderer);
+
+        // 컬럼 너비 설정 (번호 컬럼 제거 후 재조정)
+        reviewTable.getColumnModel().getColumn(0).setPreferredWidth(260);  // 제설함
+        reviewTable.getColumnModel().getColumn(1).setPreferredWidth(120);  // 별점
+        reviewTable.getColumnModel().getColumn(2).setPreferredWidth(70);   // 댓글
+        reviewTable.getColumnModel().getColumn(3).setPreferredWidth(70);   // 조회수
+        reviewTable.getColumnModel().getColumn(4).setPreferredWidth(80);   // 작성자
+        reviewTable.getColumnModel().getColumn(5).setPreferredWidth(150);  // 작성일
 
         // 더블클릭 시 상세보기
         reviewTable.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -100,36 +152,16 @@ public class ReviewPanel extends BasePanel {
                 if (response.optBoolean("success", false)) {
                     JSONArray data = response.optJSONArray("data");
                     reviews.clear();
-                    tableModel.setRowCount(0);
 
                     if (data != null) {
                         for (int i = 0; i < data.length(); i++) {
                             Review review = new Review(data.getJSONObject(i));
                             reviews.add(review);
-
-                            String saltboxText = formatSaltbox(review.getSaltboxId());
-                            String ratingText = formatRating(review.getRating());
-
-                            String author = review.getUsername().isEmpty()
-                                    ? review.getUserId()
-                                    : review.getUsername();
-
-                            String dateStr = review.getCreatedAt();
-                            if (dateStr != null && dateStr.length() > 16) {
-                                dateStr = dateStr.substring(0, 16);
-                            }
-
-                            tableModel.addRow(new Object[]{
-                                    review.getId(),
-                                    saltboxText,
-                                    ratingText,
-                                    review.getCommentCount(),
-                                    review.getViewCount(),
-                                    author,
-                                    dateStr
-                            });
                         }
                     }
+
+                    // 정렬/요약을 포함해 테이블 갱신
+                    refreshTable();
                 } else {
                     showError("후기 목록을 불러오는데 실패했습니다.");
                 }
@@ -177,6 +209,86 @@ public class ReviewPanel extends BasePanel {
 
         // 상세 보기 시 조회수가 증가하므로, 다이얼로그 종료 후 목록을 새로고침
         loadReviews();
+    }
+
+    /**
+     * 정렬 기준에 따라 테이블을 갱신하고 요약 정보를 업데이트
+     */
+    private void refreshTable() {
+        if (reviews == null) return;
+
+        // 검색어로 필터링 (제설함 위치 검색)
+        String searchKeyword = searchField != null ? searchField.getText().trim().toLowerCase() : "";
+        List<Review> filtered = new ArrayList<>();
+        if (searchKeyword.isEmpty()) {
+            filtered.addAll(reviews);
+        } else {
+            for (Review review : reviews) {
+                SnowBoxInfo info = SnowBoxStore.getById(review.getSaltboxId());
+                if (info != null) {
+                    String sboxNum = info.getSboxNum() != null ? info.getSboxNum().toLowerCase() : "";
+                    String detlCn = info.getDetlCn() != null ? info.getDetlCn().toLowerCase() : "";
+                    String mgcNm = info.getMgcNm() != null ? info.getMgcNm().toLowerCase() : "";
+                    if (sboxNum.contains(searchKeyword) || detlCn.contains(searchKeyword) || mgcNm.contains(searchKeyword)) {
+                        filtered.add(review);
+                    }
+                }
+            }
+        }
+
+        List<Review> sorted = new ArrayList<>(filtered);
+        int sortIndex = sortComboBox != null ? sortComboBox.getSelectedIndex() : 0;
+
+        switch (sortIndex) {
+            case 1: // 별점 높은순
+                sorted.sort((a, b) -> Integer.compare(b.getRating(), a.getRating()));
+                break;
+            case 2: // 조회수순
+                sorted.sort((a, b) -> Integer.compare(b.getViewCount(), a.getViewCount()));
+                break;
+            case 3: // 댓글 많은순
+                sorted.sort((a, b) -> Integer.compare(b.getCommentCount(), a.getCommentCount()));
+                break;
+            default: // 최신순 (created_at DESC 순서 유지)
+                // 그대로 사용
+                break;
+        }
+
+        tableModel.setRowCount(0);
+        for (Review review : sorted) {
+            String saltboxText = formatSaltbox(review.getSaltboxId());
+            String ratingText = formatRating(review.getRating());
+
+            String author = review.getUsername().isEmpty()
+                    ? review.getUserId()
+                    : review.getUsername();
+
+            String dateStr = review.getCreatedAt();
+            if (dateStr != null && dateStr.length() > 16) {
+                dateStr = dateStr.substring(0, 16);
+            }
+
+            tableModel.addRow(new Object[]{
+                    saltboxText,
+                    ratingText,
+                    review.getCommentCount(),
+                    review.getViewCount(),
+                    author,
+                    dateStr
+            });
+        }
+
+        // 요약 정보 업데이트 (검색 결과 반영)
+        int count = sorted.size();
+        int sumRating = 0;
+        for (Review r : sorted) {
+            sumRating += r.getRating();
+        }
+        double avgRating = count > 0 ? (double) sumRating / count : 0.0;
+        String searchText = searchKeyword.isEmpty() ? "" : " (검색: \"" + searchField.getText().trim() + "\")";
+        summaryLabel.setText(
+                String.format("총 %d개의 후기가 있습니다. 평균 별점: %.1f / 5%s", count, avgRating, searchText)
+        );
     }
 
     /**
