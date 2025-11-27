@@ -63,17 +63,13 @@ async function initDB() {
 
     return pool;
   } catch (err) {
-    logger.error('❌ MySQL Connection FAILED!');
-    logger.error('Error Code:', err.code);
-    logger.error('Error Number:', err.errno);
-    logger.error('SQL State:', err.sqlState);
-    logger.error('Error Message:', err.message);
-    logger.error('Full Error:', {
-      code: err.code,
-      errno: err.errno,
+    // 에러 정보를 하나의 객체로 묶어서 출력 (문자열 분해 방지)
+    logger.error('❌ MySQL Connection FAILED!', {
+      errorCode: err.code,
+      errorNumber: err.errno,
       sqlState: err.sqlState,
-      message: err.message,
-      stack: err.stack,
+      errorMessage: err.message,
+      errorStack: err.stack,
     });
     logger.error('Connection Config Used:', {
       host: dbConfig.host,
@@ -81,6 +77,7 @@ async function initDB() {
       user: dbConfig.user,
       database: dbConfig.database,
       hasPassword: !!dbConfig.password,
+      passwordLength: dbConfig.password ? dbConfig.password.length : 0,
     });
     throw err; // 서버가 잘못된 DB 설정으로 계속 실행되지 않도록
   }
