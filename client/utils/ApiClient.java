@@ -10,6 +10,11 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Properties;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import java.security.cert.X509Certificate;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -18,10 +23,32 @@ import org.json.JSONObject;
  * 세션 쿠키를 자동으로 관리합니다.
  */
 public class ApiClient {
-    private static final String DEFAULT_BASE_URL = "http://localhost:3000/api";
+    // Railway 프로덕션 서버 URL (기본값)
+    private static final String DEFAULT_BASE_URL = "https://snowshare-production.up.railway.app/api";
+    // 로컬 개발 서버 URL (설정 파일에서 변경 가능)
+    // private static final String DEFAULT_BASE_URL = "http://localhost:3000/api";
     private static final String CONFIG_FILE = "config.properties";
     private static final String BASE_URL = loadBaseUrl();
     private static final CookieManager cookieManager = new CookieManager();
+    
+    // SSL 인증서 검증 우회 (개발/테스트용 - 프로덕션에서는 신뢰할 수 있는 인증서 사용 권장)
+    static {
+        try {
+            TrustManager[] trustAllCerts = new TrustManager[] {
+                new X509TrustManager() {
+                    public X509Certificate[] getAcceptedIssuers() { return null; }
+                    public void checkClientTrusted(X509Certificate[] certs, String authType) { }
+                    public void checkServerTrusted(X509Certificate[] certs, String authType) { }
+                }
+            };
+            SSLContext sc = SSLContext.getInstance("SSL");
+            sc.init(null, trustAllCerts, new java.security.SecureRandom());
+            HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+            HttpsURLConnection.setDefaultHostnameVerifier((hostname, session) -> true);
+        } catch (Exception e) {
+            System.err.println("SSL 설정 실패: " + e.getMessage());
+        }
+    }
     
     /**
      * 설정 파일에서 API 기본 URL을 로드합니다.
@@ -81,15 +108,19 @@ public class ApiClient {
      * HTTP 요청 전송
      */
     private static JSONObject sendRequest(String method, String endpoint, JSONObject data) throws IOException {
-        URL url = new URL(BASE_URL + endpoint);
+        String fullUrl = BASE_URL + endpoint;
+        System.out.println("API 요청: " + method + " " + fullUrl); // 디버깅용
+        
+        URL url = new URL(fullUrl);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         
         try {
             conn.setRequestMethod(method);
             conn.setRequestProperty("Content-Type", "application/json");
             conn.setRequestProperty("Accept", "application/json");
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(5000);
+            conn.setConnectTimeout(30000); // 30초 (Railway 슬립 모드 대응)
+            conn.setReadTimeout(30000); // 30초 (Railway 슬립 모드 대응)
+            conn.setInstanceFollowRedirects(true); // 리다이렉트 허용
             
             // 쿠키 추가 (세션 관리)
             URI uri = url.toURI();
@@ -153,10 +184,21 @@ public class ApiClient {
                 return new JSONObject(response.toString());
             }
         } catch (Exception e) {
+            // 더 자세한 에러 정보 출력
+            System.err.println("API 요청 실패:");
+            System.err.println("  URL: " + BASE_URL + endpoint);
+            System.err.println("  Method: " + method);
+            System.err.println("  Error: " + e.getClass().getName());
+            System.err.println("  Message: " + e.getMessage());
+            if (e.getCause() != null) {
+                System.err.println("  Cause: " + e.getCause().getMessage());
+            }
+            e.printStackTrace();
+            
             if (e instanceof IOException) {
                 throw (IOException) e;
             }
-            throw new IOException("요청 처리 중 오류 발생: " + e.getMessage(), e);
+            throw new IOException("요청 처리 중 오류 발생: " + e.getMessage() + " (URL: " + BASE_URL + endpoint + ")", e);
         } finally {
             conn.disconnect();
         }
