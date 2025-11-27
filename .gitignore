@@ -10,7 +10,7 @@
 *.war
 *.ear
 
-# Allow specific local JARs (예: json 라이브러리)
+# Allow only specific required JAR (공유 필수 라이브러리만)
 !client/lib/json-20231013.jar
 
 # Java crash logs
@@ -40,8 +40,13 @@ build/
 # VSCode
 ############################
 
+# 모든 개인 설정 제외
 .vscode/
 *.code-workspace
+
+# (필요할 경우 개별적으로 열 수 있도록 예시)
+# !.vscode/settings.json
+# !.vscode/launch.json
 
 ############################
 # Node.js (API 폴더)
@@ -53,13 +58,13 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# API env files
+# API env files (보안상 필수 제외)
 .env
 .env.*
 api/.env
 
 ############################
-# Logs / Temp
+# Logs / Temp files
 ############################
 
 *.log
@@ -83,10 +88,10 @@ ehthumbs.db
 desktop.ini
 
 ############################
-# IDE specific
+# IDE-specific
 ############################
 
-# IntelliJ IDEA
+# IntelliJ
 .idea/
 *.iml
 *.ipr
@@ -98,7 +103,7 @@ desktop.ini
 .settings/
 
 ############################
-# 기타 프로젝트 파일
+# 기타
 ############################
 
 # Swap files
