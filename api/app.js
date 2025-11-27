@@ -67,6 +67,8 @@ const dbName =
   process.env.MYSQL_DATABASE ||
   'snowshare';
 
+// 세션 스토어 생성 및 미들웨어 설정 (라우트 등록 전)
+// 세션 스토어 초기화 실패해도 메모리 세션으로 계속 진행
 let sessionStore;
 try {
   sessionStore = new MySQLStore(
@@ -79,28 +81,23 @@ try {
     },
     db,
   );
-
-  app.use(
-    session({
-      secret: process.env.SESSION_SECRET || 'default',
-      store: sessionStore,
-      resave: false,
-      saveUninitialized: false,
-      cookie: { maxAge: 86400000, httpOnly: true },
-    }),
-  );
+  logger.info('MySQL session store initialized');
 } catch (sessionError) {
   logger.error('Session store initialization error:', sessionError);
-  // 세션 스토어 실패해도 메모리 세션으로 계속 진행
-  app.use(
-    session({
-      secret: process.env.SESSION_SECRET || 'default',
-      resave: false,
-      saveUninitialized: false,
-      cookie: { maxAge: 86400000, httpOnly: true },
-    }),
-  );
+  logger.error('Falling back to memory session');
+  sessionStore = null;
 }
+
+// 세션 미들웨어 설정
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || 'default',
+    store: sessionStore || undefined, // sessionStore가 null이면 메모리 세션 사용
+    resave: false,
+    saveUninitialized: false,
+    cookie: { maxAge: 86400000, httpOnly: true },
+  }),
+);
 
 // DB 연결 상태 확인 미들웨어 (DB가 필요한 API에만 적용)
 const checkDatabaseConnection = (req, res, next) => {
@@ -184,35 +181,52 @@ app.use((req, res) => {
   res.status(404).json({ error: { message: 'Route not found', status: 404 } });
 });
 
-// 🚀 서버 시작 (DB 연결 확인 후 시작)
-(async () => {
-  try {
-    // DB 연결 확인
-    await initDB();
-    dbInitialized = true;
-    dbError = null;
-    logger.info('Database connection verified');
+// 🚀 서버 시작 (먼저 서버를 시작하고, DB 초기화는 비동기로 처리)
+try {
+  app.listen(PORT, '0.0.0.0', () => {
+    logger.info(`Server running on port ${PORT}`);
 
-    // DB 테이블 초기화
-    await initDatabase();
-    logger.info('Database tables initialized successfully');
+    // DB 연결 정보 로그 (디버깅용, 비밀번호는 제외)
+    logger.info('Database connection config:', {
+      host: dbHost,
+      port: dbPort,
+      user: dbUser,
+      database: dbName,
+      hasPassword: !!dbPass,
+    });
 
-    // 서버 시작
-    app.listen(PORT, '0.0.0.0', () => {
-      logger.info(`Server running on port ${PORT}`);
-    });
-  } catch (error) {
-    dbError = error;
-    logger.error('Database initialization failed:', error);
-    logger.error('Error details:', {
-      message: error.message,
-      code: error.code,
-      errno: error.errno,
-      sqlState: error.sqlState,
-    });
-    logger.error('Server will not start due to database connection failure');
-    process.exit(1); // DB 연결 실패 시 서버 종료
-  }
-})();
+    // 서버 시작 후 DB 초기화 (비동기)
+    (async () => {
+      try {
+        // DB 연결 확인
+        await initDB();
+        dbInitialized = true;
+        dbError = null;
+        logger.info('Database connection verified');
+
+        // DB 테이블 초기화
+        await initDatabase();
+        logger.info('Database tables initialized successfully');
+      } catch (error) {
+        dbError = error;
+        logger.error('Database initialization failed:', error);
+        logger.error('Error details:', {
+          message: error.message,
+          code: error.code,
+          errno: error.errno,
+          sqlState: error.sqlState,
+        });
+        logger.error(
+          'Server will continue running, but database operations may fail',
+        );
+        // 서버는 계속 실행 (Railway crash 방지)
+      }
+    })();
+  });
+} catch (error) {
+  logger.error('Failed to start server:', error);
+  logger.error('Error stack:', error.stack);
+  process.exit(1);
+}
 
 module.exports = app;
