@@ -1,72 +1,25 @@
 import javax.swing.*;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 /**
- * SnowShare Client - Main Entry Point
+ * SnowShare Client - 메인 진입점
+ * App 클래스를 통해 전체 애플리케이션을 시작합니다.
  */
-public class Main extends JFrame {
-  private JPanel mainPanel;
-  private JButton testButton;
-  private JLabel statusLabel;
-
-  public Main() {
-    initializeComponents();
-    setupLayout();
-    setupEventHandlers();
-  }
-
-  private void initializeComponents() {
-    mainPanel = new JPanel();
-    mainPanel.setLayout(new BorderLayout());
-    mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-
-    testButton = new JButton("Test Connection");
-    statusLabel = new JLabel("Ready");
-    statusLabel.setHorizontalAlignment(SwingConstants.CENTER);
-  }
-
-  private void setupLayout() {
-    JPanel buttonPanel = new JPanel();
-    buttonPanel.add(testButton);
-
-    mainPanel.add(statusLabel, BorderLayout.CENTER);
-    mainPanel.add(buttonPanel, BorderLayout.SOUTH);
-
-    add(mainPanel);
-  }
-
-  private void setupEventHandlers() {
-    testButton.addActionListener(
-        new ActionListener() {
-          @Override
-          public void actionPerformed(ActionEvent e) {
-            statusLabel.setText("Testing connection...");
-            // TODO: Implement API connection test
-            JOptionPane.showMessageDialog(
-                Main.this,
-                "API connection test - To be implemented",
-                "Info",
-                JOptionPane.INFORMATION_MESSAGE);
-            statusLabel.setText("Ready");
-          }
+public class Main {
+    public static void main(String[] args) {
+        // Look and Feel 설정
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            System.err.println("Look and Feel 설정 실패: " + e.getMessage());
+        }
+        
+        // Swing 이벤트 디스패치 스레드에서 애플리케이션 시작
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                new App();
+            }
         });
-  }
-
-  public static void main(String[] args) {
-    SwingUtilities.invokeLater(
-        new Runnable() {
-          @Override
-          public void run() {
-            Main frame = new Main();
-            frame.setTitle("SnowShare");
-            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            frame.setSize(600, 400);
-            frame.setLocationRelativeTo(null);
-            frame.setVisible(true);
-          }
-        });
-  }
+    }
 }
 
