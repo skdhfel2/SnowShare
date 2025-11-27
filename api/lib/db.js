@@ -44,6 +44,15 @@ const pool = mysql.createPool(dbConfig);
 
 async function initDB() {
   try {
+    logger.info('Attempting to connect to MySQL...');
+    logger.info('Connection config:', {
+      host: dbConfig.host,
+      port: dbConfig.port,
+      user: dbConfig.user,
+      database: dbConfig.database,
+      hasPassword: !!dbConfig.password,
+    });
+
     // 연결 테스트
     await pool.query('SELECT 1');
 
@@ -55,11 +64,18 @@ async function initDB() {
     return pool;
   } catch (err) {
     logger.error('❌ MySQL Connection FAILED!');
-    logger.error('CODE:', err.code);
-    logger.error('ERRNO:', err.errno);
-    logger.error('SQL STATE:', err.sqlState);
-    logger.error('MESSAGE:', err.message);
-    logger.error('Config:', {
+    logger.error('Error Code:', err.code);
+    logger.error('Error Number:', err.errno);
+    logger.error('SQL State:', err.sqlState);
+    logger.error('Error Message:', err.message);
+    logger.error('Full Error:', {
+      code: err.code,
+      errno: err.errno,
+      sqlState: err.sqlState,
+      message: err.message,
+      stack: err.stack,
+    });
+    logger.error('Connection Config Used:', {
       host: dbConfig.host,
       port: dbConfig.port,
       user: dbConfig.user,
