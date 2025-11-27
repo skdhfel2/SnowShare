@@ -2,7 +2,7 @@ require('dotenv').config();
 
 const fs = require('fs');
 const path = require('path');
-const db = require('../lib/db');
+const { pool: db } = require('../lib/db');
 const logger = require('../lib/logger');
 
 /**

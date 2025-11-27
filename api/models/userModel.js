@@ -1,5 +1,5 @@
 const bcrypt = require('bcrypt');
-const db = require('../lib/db');
+const { pool: db } = require('../lib/db');
 const logger = require('../lib/logger');
 
 /**

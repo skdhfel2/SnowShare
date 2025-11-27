@@ -5,7 +5,7 @@ const MySQLStore = require('express-mysql-session')(session);
 require('dotenv').config();
 
 const logger = require('./lib/logger');
-const db = require('./lib/db');
+const { pool: db, initDB } = require('./lib/db');
 const { initDatabase } = require('./models/initDatabase');
 
 const testRoutes = require('./routes/test');
@@ -39,15 +39,43 @@ app.use((req, res, next) => {
 });
 
 // 세션 스토어 생성 및 미들웨어 설정 (라우트 등록 전)
+// Railway MySQL 서비스 환경 변수 지원 (db.js와 동일한 우선순위)
+const dbHost =
+  process.env.DB_HOST ||
+  process.env.MYSQLHOST ||
+  process.env.RAILWAY_PRIVATE_DOMAIN ||
+  'localhost';
+const dbPort =
+  process.env.DB_PORT ||
+  process.env.MYSQLPORT ||
+  process.env.MYSQL_PORT ||
+  '3306';
+const dbUser =
+  process.env.DB_USER ||
+  process.env.MYSQLUSER ||
+  process.env.MYSQL_USER ||
+  'root';
+const dbPass =
+  process.env.DB_PASS ||
+  process.env.DB_PASSWORD ||
+  process.env.MYSQLPASSWORD ||
+  process.env.MYSQL_PASSWORD ||
+  '';
+const dbName =
+  process.env.DB_NAME ||
+  process.env.MYSQLDATABASE ||
+  process.env.MYSQL_DATABASE ||
+  'snowshare';
+
 let sessionStore;
 try {
   sessionStore = new MySQLStore(
     {
-      host: process.env.DB_HOST,
-      port: process.env.DB_PORT,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASS,
-      database: process.env.DB_NAME,
+      host: dbHost,
+      port: dbPort,
+      user: dbUser,
+      password: dbPass,
+      database: dbName,
     },
     db,
   );
@@ -74,12 +102,34 @@ try {
   );
 }
 
+// DB 연결 상태 확인 미들웨어 (DB가 필요한 API에만 적용)
+const checkDatabaseConnection = (req, res, next) => {
+  if (!dbInitialized && dbError) {
+    return res.status(503).json({
+      success: false,
+      message: '데이터베이스 연결이 실패했습니다. 잠시 후 다시 시도해주세요.',
+      error: 'Database connection failed',
+      databaseStatus: 'disconnected',
+    });
+  }
+  if (!dbInitialized) {
+    return res.status(503).json({
+      success: false,
+      message: '데이터베이스 초기화 중입니다. 잠시 후 다시 시도해주세요.',
+      error: 'Database initializing',
+      databaseStatus: 'initializing',
+    });
+  }
+  next();
+};
+
 // Routes
 app.use('/api/test', testRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/posts', postRoutes);
-app.use('/api/reviews', reviewRoutes);
-app.use('/api/comments', commentRoutes);
+// DB가 필요한 API에만 미들웨어 적용
+app.use('/api/posts', checkDatabaseConnection, postRoutes);
+app.use('/api/reviews', checkDatabaseConnection, reviewRoutes);
+app.use('/api/comments', checkDatabaseConnection, commentRoutes);
 
 // Root path (Railway health check용)
 app.get('/', (req, res) => {
@@ -134,25 +184,35 @@ app.use((req, res) => {
   res.status(404).json({ error: { message: 'Route not found', status: 404 } });
 });
 
-// 🚀 서버 시작 (먼저 서버를 시작하고, DB 초기화는 비동기로 처리)
-app.listen(PORT, '0.0.0.0', () => {
-  logger.info(`Server running on port ${PORT}`);
+// 🚀 서버 시작 (DB 연결 확인 후 시작)
+(async () => {
+  try {
+    // DB 연결 확인
+    await initDB();
+    dbInitialized = true;
+    dbError = null;
+    logger.info('Database connection verified');
 
-  // 서버 시작 후 DB 초기화 (비동기)
-  initDatabase()
-    .then(() => {
-      dbInitialized = true;
-      dbError = null;
-      logger.info('Database initialized successfully');
-    })
-    .catch((error) => {
-      dbError = error;
-      logger.error('Database initialization failed:', error);
-      logger.error(
-        'Server will continue running, but database operations may fail',
-      );
-      // 서버는 계속 실행 (Railway crash 방지)
+    // DB 테이블 초기화
+    await initDatabase();
+    logger.info('Database tables initialized successfully');
+
+    // 서버 시작
+    app.listen(PORT, '0.0.0.0', () => {
+      logger.info(`Server running on port ${PORT}`);
     });
-});
+  } catch (error) {
+    dbError = error;
+    logger.error('Database initialization failed:', error);
+    logger.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      errno: error.errno,
+      sqlState: error.sqlState,
+    });
+    logger.error('Server will not start due to database connection failure');
+    process.exit(1); // DB 연결 실패 시 서버 종료
+  }
+})();
 
 module.exports = app;
