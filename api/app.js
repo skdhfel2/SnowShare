@@ -19,11 +19,11 @@ const PORT = process.env.PORT || 3000;
 // 세션 스토어 설정 (MySQL)
 const sessionStore = new MySQLStore(
   {
-    host: process.env.DB_HOST || 'localhost',
-    port: 3306,
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASS || '',
-    database: process.env.DB_NAME || 'snowshare',
+    host: process.env.DB_HOST || process.env.MYSQL_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || process.env.MYSQLPORT || '3306', 10),
+    user: process.env.DB_USER || process.env.MYSQLUSER || 'root',
+    password: process.env.DB_PASS || process.env.MYSQLPASSWORD || '',
+    database: process.env.DB_NAME || process.env.MYSQLDATABASE || 'snowshare',
     clearExpired: true,
     checkExpirationInterval: 900000, // 15분마다 만료된 세션 확인
     expiration: 86400000, // 24시간 (밀리초)
@@ -98,10 +98,12 @@ app.use((req, res) => {
 // 서버 시작 전 데이터베이스 초기화
 async function startServer() {
   try {
+    // 데이터베이스 초기화
     await initDatabase();
     logger.info('Database initialization completed');
 
-    app.listen(PORT, () => {
+    // 서버 시작 (Railway 환경에 맞게 0.0.0.0으로 바인딩)
+    app.listen(PORT, '0.0.0.0', () => {
       logger.info(`Server is running on port ${PORT}`);
     });
   } catch (error) {
@@ -110,6 +112,7 @@ async function startServer() {
   }
 }
 
+// 서버 시작
 startServer();
 
 module.exports = app;

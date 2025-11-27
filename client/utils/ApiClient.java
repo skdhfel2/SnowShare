@@ -9,6 +9,7 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Properties;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -17,8 +18,36 @@ import org.json.JSONObject;
  * 세션 쿠키를 자동으로 관리합니다.
  */
 public class ApiClient {
-    private static final String BASE_URL = "http://localhost:3000/api";
+    private static final String DEFAULT_BASE_URL = "http://localhost:3000/api";
+    private static final String CONFIG_FILE = "config.properties";
+    private static final String BASE_URL = loadBaseUrl();
     private static final CookieManager cookieManager = new CookieManager();
+    
+    /**
+     * 설정 파일에서 API 기본 URL을 로드합니다.
+     * 설정 파일이 없거나 속성이 없으면 기본값을 사용합니다.
+     */
+    private static String loadBaseUrl() {
+        try {
+            Properties props = new Properties();
+            File configFile = new File(CONFIG_FILE);
+            
+            if (configFile.exists()) {
+                try (FileInputStream fis = new FileInputStream(configFile)) {
+                    props.load(fis);
+                    String baseUrl = props.getProperty("api.base.url");
+                    if (baseUrl != null && !baseUrl.trim().isEmpty()) {
+                        return baseUrl.trim();
+                    }
+                }
+            }
+        } catch (IOException e) {
+            // 설정 파일을 읽을 수 없으면 기본값 사용
+            System.err.println("설정 파일을 읽을 수 없습니다. 기본 URL을 사용합니다: " + e.getMessage());
+        }
+        
+        return DEFAULT_BASE_URL;
+    }
     
     /**
      * GET 요청
