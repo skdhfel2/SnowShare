@@ -7,6 +7,7 @@
     "start": "node app.js",
     "build": "echo \"No build step\"",
     "dev": "nodemon app.js",
+    "build": "echo 'No build step needed'",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write ."
