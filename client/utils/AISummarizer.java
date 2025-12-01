@@ -3,39 +3,69 @@ package utils;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Properties;
 
 /**
- * AI 요약 서비스 - Google Gemini API 연동
+ * AI 요약 서비스 - 백엔드 서버를 통한 안전한 API 호출
+ * 
+ * ✅ 보안: API 키는 서버에만 존재, 클라이언트 코드에 노출 안 됨
+ * ✅ 실무 패턴: 클라이언트 → 우리 서버 → 외부 API
  */
 public class AISummarizer {
-    private static final String GEMINI_API_KEY = "AIzaSyASUQPkWCztalunI20N_ARsCmU1oa4h6-w";
-    // v1 API에서 사용 가능한 모델: gemini-pro 사용
-    private static final String GEMINI_API_URL =
-    "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=";
-
+    // 기본 서버 URL (config.properties에서 로드)
+    private static final String DEFAULT_BASE_URL = "https://snowshare-production.up.railway.app/api";
+    private static final String CONFIG_FILE = "config.properties";
+    private static final String API_BASE_URL = loadBaseUrl();
+    private static final String SUMMARIZE_ENDPOINT = "/summarize";
     
     /**
-     * Google Gemini API를 사용하여 텍스트 요약
+     * 설정 파일에서 API 기본 URL을 로드합니다.
+     */
+    private static String loadBaseUrl() {
+        try {
+            Properties props = new Properties();
+            File configFile = new File(CONFIG_FILE);
+            
+            if (configFile.exists()) {
+                try (FileInputStream fis = new FileInputStream(configFile)) {
+                    props.load(fis);
+                    String baseUrl = props.getProperty("api.base.url");
+                    if (baseUrl != null && !baseUrl.trim().isEmpty()) {
+                        return baseUrl.trim();
+                    }
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("설정 파일을 읽을 수 없습니다. 기본 URL을 사용합니다: " + e.getMessage());
+        }
+        
+        return DEFAULT_BASE_URL;
+    }
+    
+    /**
+     * 백엔드 서버를 통해 텍스트 요약
+     * 
+     * @param text 요약할 텍스트
+     * @return 요약된 텍스트
+     * @throws Exception API 호출 실패 시
      */
     public String summarize(String text) throws Exception {
         if (text == null || text.trim().isEmpty()) {
             throw new Exception("요약할 텍스트가 없습니다.");
         }
         
-        String url = GEMINI_API_URL + GEMINI_API_KEY;
+        String url = API_BASE_URL + SUMMARIZE_ENDPOINT;
         
-        // 텍스트 이스케이프 처리 (JSON 안전하게 만들기)
-        String escapedText = escapeJsonString(text);
-        
-        // 요청 본문 생성
-        String requestBody = String.format(
-                "{\"contents\":[{\"parts\":[{\"text\":\"다음 뉴스 기사를 한국어로 간단하고 명확하게 3-5문장으로 요약해주세요:\\n\\n%s\"}]}]}",
-                escapedText);
+        // 요청 본문 생성 (서버로 보낼 JSON)
+        String requestBody = String.format("{\"text\":%s}", escapeJsonString(text));
         
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         connection.setRequestMethod("POST");
@@ -65,14 +95,11 @@ public class AISummarizer {
         
         if (statusCode < 200 || statusCode >= 300) {
             // 에러 응답에서 상세 정보 추출
-            String errorMessage = "API 호출 실패 (" + statusCode + ")";
+            String errorMessage = "서버 API 호출 실패 (" + statusCode + ")";
             try {
                 JsonObject errorJson = JsonParser.parseString(response).getAsJsonObject();
                 if (errorJson.has("error")) {
-                    JsonObject error = errorJson.getAsJsonObject("error");
-                    if (error.has("message")) {
-                        errorMessage += ": " + error.get("message").getAsString();
-                    }
+                    errorMessage += ": " + errorJson.get("error").getAsString();
                 } else {
                     errorMessage += ": " + response;
                 }
@@ -83,7 +110,7 @@ public class AISummarizer {
         }
         
         if (response == null || response.trim().isEmpty()) {
-            throw new Exception("API 응답이 비어있습니다.");
+            throw new Exception("서버 응답이 비어있습니다.");
         }
         
         // JSON 파싱
@@ -94,34 +121,28 @@ public class AISummarizer {
             throw new Exception("JSON 파싱 실패: " + e.getMessage() + "\n응답: " + response);
         }
         
-        // 응답 구조 확인
-        if (jsonResponse.has("candidates") && jsonResponse.getAsJsonArray("candidates").size() > 0) {
-            JsonObject candidate = jsonResponse.getAsJsonArray("candidates").get(0).getAsJsonObject();
-            if (candidate.has("content")) {
-                JsonObject content = candidate.getAsJsonObject("content");
-                if (content.has("parts") && content.getAsJsonArray("parts").size() > 0) {
-                    JsonObject part = content.getAsJsonArray("parts").get(0).getAsJsonObject();
-                    if (part.has("text")) {
-                        return part.get("text").getAsString();
-                    }
-                }
+        // 서버 응답 구조: { "success": true, "summary": "요약 텍스트" }
+        if (jsonResponse.has("success") && jsonResponse.get("success").getAsBoolean()) {
+            if (jsonResponse.has("summary")) {
+                return jsonResponse.get("summary").getAsString();
             }
         }
         
-        // 응답 구조가 예상과 다를 때 전체 응답 포함
-        throw new Exception("API 응답에서 요약을 찾을 수 없습니다. 응답: " + response);
+        // 응답 구조가 예상과 다를 때
+        throw new Exception("서버 응답에서 요약을 찾을 수 없습니다. 응답: " + response);
     }
     
     /**
-     * JSON 문자열 이스케이프 처리
+     * JSON 문자열로 변환 (따옴표로 감싸고 이스케이프 처리)
      */
     private String escapeJsonString(String text) {
-        if (text == null) return "";
-        return text.replace("\\", "\\\\")
-                   .replace("\"", "\\\"")
-                   .replace("\n", "\\n")
-                   .replace("\r", "\\r")
-                   .replace("\t", "\\t");
+        if (text == null) return "\"\"";
+        String escaped = text.replace("\\", "\\\\")
+                             .replace("\"", "\\\"")
+                             .replace("\n", "\\n")
+                             .replace("\r", "\\r")
+                             .replace("\t", "\\t");
+        return "\"" + escaped + "\"";
     }
     
     /**

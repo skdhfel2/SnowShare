@@ -13,6 +13,7 @@ const authRoutes = require('./routes/auth');
 const postRoutes = require('./routes/posts');
 const reviewRoutes = require('./routes/reviews');
 const commentRoutes = require('./routes/comments');
+const summarizeRoutes = require('./routes/summarize');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -123,6 +124,7 @@ const checkDatabaseConnection = (req, res, next) => {
 // Routes
 app.use('/api/test', testRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/summarize', summarizeRoutes); // AI 요약 API (DB 불필요)
 // DB가 필요한 API에만 미들웨어 적용
 app.use('/api/posts', checkDatabaseConnection, postRoutes);
 app.use('/api/reviews', checkDatabaseConnection, reviewRoutes);
