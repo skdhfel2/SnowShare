@@ -111,6 +111,9 @@ cd SnowShare
 
 ### 2️ 클라이언트 실행 (Java Swing)
 
+본 프로젝트는 Main.java 파일을 run.java로 실행하거나,
+client/run.bat 파일을 통해 실행할 수 있습니다.
+
 #### Windows에서 실행
 
 ```bash
